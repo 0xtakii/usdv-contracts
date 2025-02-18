@@ -12,6 +12,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IChainlinkOracle} from "../interfaces/oracles/IChainlinkOracle.sol";
 import {IUsfPriceStorage} from "../interfaces/IUsfPriceStorage.sol";
 
+import {console2} from "forge-std/Test.sol";
+
 contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefaultAdminRules, Pausable {
 
     using SafeERC20 for IERC20;
@@ -44,8 +46,8 @@ contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefault
         address _usfTokenAddress,
         address[] memory _allowedWithdrawalTokenAddresses,
         address _treasury,
-        IChainlinkOracle _chainlinkOracle,
-        IUsfPriceStorage _usfPriceStorage,
+        address _chainlinkOracle,
+        address _usfPriceStorage,
         uint256 _usfPriceStorageHeartbeatInterval,
         uint256 _redemptionLimit,
         uint256 _lastResetTime
@@ -102,16 +104,16 @@ contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefault
         emit TreasurySet(_treasury);
     }
 
-    function setChainlinkOracle(IChainlinkOracle _chainlinkOracle) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _assertNonZero(address(_chainlinkOracle));
-        chainlinkOracle = _chainlinkOracle;
-        emit ChainlinkOracleSet(address(_chainlinkOracle));
+    function setChainlinkOracle(address _chainlinkOracle) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _assertNonZero(_chainlinkOracle);
+        chainlinkOracle = IChainlinkOracle(_chainlinkOracle);
+        emit ChainlinkOracleSet(_chainlinkOracle);
     }
 
-    function setUsfPriceStorage(IUsfPriceStorage _usfPriceStorage) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _assertNonZero(address(_usfPriceStorage));
-        usfPriceStorage = _usfPriceStorage;
-        emit UsfPriceStorageSet(address(_usfPriceStorage));
+    function setUsfPriceStorage(address _usfPriceStorage) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _assertNonZero(_usfPriceStorage);
+        usfPriceStorage = IUsfPriceStorage(_usfPriceStorage);
+        emit UsfPriceStorageSet(_usfPriceStorage);
     }
 
     function setUsfPriceStorageHeartbeatInterval(uint256 _usfPriceStorageHeartbeatInterval) public onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -177,7 +179,7 @@ contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefault
         uint256 treasuryWithdrawalTokenBalance = withdrawalToken.balanceOf(address(treasury));
 
         if (treasuryWithdrawalTokenBalance < withdrawalTokenAmount) {
-            revert NotEnoughTokensForRedemption(withdrawalToken, withdrawalTokenAmount, treasuryWithdrawalTokenBalance);
+            revert NotEnoughTokensForRedemption(_withdrawalTokenAddress, withdrawalTokenAmount, treasuryWithdrawalTokenBalance);
         }
 
         // slither-disable-next-line arbitrary-send-erc20

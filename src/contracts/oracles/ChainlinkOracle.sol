@@ -2,24 +2,25 @@
 pragma solidity ^0.8.25;
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {FeedRegistryInterface} from "@chainlink/contracts/src/v0.8/interfaces/FeedRegistryInterface.sol";
+import {FeedRegistryInterface} from "../../interfaces/oracles/FeedRegistryInterface.sol";
 import {IChainlinkOracle} from "../../interfaces/oracles/IChainlinkOracle.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IDefaultErrors} from "../../interfaces/IDefaultErrors.sol";
 
 contract ChainlinkOracle is IChainlinkOracle, IDefaultErrors, Ownable2Step {
 
+    address public constant USD = address(840); // taken from chainlink Denominations library
+
     FeedRegistryInterface public feedRegistry;
     mapping(address token => uint48 heartbeatInterval) public tokenHeartbeatIntervals;
 
     // slither-disable-start pess-strange-setter
     constructor(
-        FeedRegistryInterface _feedRegistry,
+        address _feedRegistry,
         address[] memory _tokenAddresses,
         uint48[] memory _heartbeatIntervals
     ) Ownable(msg.sender) {
-        setFeedRegistry(_feedRegistry);
+        setFeedRegistry(FeedRegistryInterface(_feedRegistry));
         if (_tokenAddresses.length != _heartbeatIntervals.length) revert InvalidArrayLengths();
         for (uint256 i = 0; i < _tokenAddresses.length; i++) {
             setHeartbeatInterval(_tokenAddresses[i], _heartbeatIntervals[i]);
@@ -33,11 +34,11 @@ contract ChainlinkOracle is IChainlinkOracle, IDefaultErrors, Ownable2Step {
     }
 
     function priceDecimals(address _tokenAddress) external view returns (uint8 decimals) {
-        return feedRegistry.decimals(_tokenAddress, Denominations.USD);
+        return feedRegistry.decimals(_tokenAddress, USD);
     }
 
     function quoteCurrency() external pure returns (address currency) {
-        return Denominations.USD;
+        return USD;
     }
 
     function setFeedRegistry(FeedRegistryInterface _feedRegistry) public onlyOwner {
@@ -65,7 +66,7 @@ contract ChainlinkOracle is IChainlinkOracle, IDefaultErrors, Ownable2Step {
             startedAt,
             updatedAt,
             answeredInRound
-        ) = feedRegistry.latestRoundData(_tokenAddress, Denominations.USD);
+        ) = feedRegistry.latestRoundData(_tokenAddress, USD);
 
         uint48 heartbeatInterval = tokenHeartbeatIntervals[_tokenAddress];
         if (block.timestamp - updatedAt > heartbeatInterval) revert ChainlinkOracleHeartbeatFailed();

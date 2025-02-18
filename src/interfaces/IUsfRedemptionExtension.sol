@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.25;
 
 import {IUsfPriceStorage} from "./IUsfPriceStorage.sol";
 import {IChainlinkOracle} from "./oracles/IChainlinkOracle.sol";
@@ -32,13 +32,13 @@ interface IUsfRedemptionExtension is IDefaultErrors {
     error InvalidUsfPrice(uint256 _price);
     error NotEnoughTokensForRedemption(address _withdrawalToken, uint256 _requested, uint256 _available);
 
-    function setTreasury(ITreasury _treasury) external;
+    function setTreasury(address _treasury) external;
 
-    function setChainlinkOracle(IChainlinkOracle _chainlinkOracle) external;
+    function setChainlinkOracle(address _chainlinkOracle) external;
 
     function setRedemptionLimit(uint256 _redemptionLimit) external;
 
-    function setUsfPriceStorage(IUsfPriceStorage _usfPriceStorage) external;
+    function setUsfPriceStorage(address _usfPriceStorage) external;
 
     function setUsfPriceStorageHeartbeatInterval(uint256 _usfPriceStorageHeartbeatInterval) external;
 
