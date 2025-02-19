@@ -4,14 +4,14 @@ pragma solidity ^0.8.25;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {AccessControlDefaultAdminRules} from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
+import {AccessControlDefaultAdminRules} from
+    "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ISimpleToken} from "../interfaces/ISimpleToken.sol";
 import {IExternalRequestsManager} from "../interfaces/IExternalRequestsManager.sol";
 import {IAddressesWhitelist} from "../interfaces/IAddressesWhitelist.sol";
 
 contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefaultAdminRules, Pausable {
-
     using SafeERC20 for IERC20;
 
     bytes32 public constant SERVICE_ROLE = keccak256("SERVICE_ROLE");
@@ -76,7 +76,7 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
             allowedTokens[allowedTokenAddress] = true;
         }
 
-        isWhitelistEnabled = true;
+        // isWhitelistEnabled = false;
     }
 
     function setTreasury(address _treasuryAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -118,23 +118,18 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
         Pausable._unpause();
     }
 
-    function requestMint(
-        address _depositTokenAddress,
-        uint256 _amount,
-        uint256 _minMintAmount
-    ) public onlyAllowedProviders allowedToken(_depositTokenAddress) whenNotPaused {
+    function requestMint(address _depositTokenAddress, uint256 _amount, uint256 _minMintAmount)
+        public
+        onlyAllowedProviders
+        allowedToken(_depositTokenAddress)
+        whenNotPaused
+    {
         _assertAmount(_amount);
 
         IERC20(_depositTokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
         Request memory request = _addMintRequest(_depositTokenAddress, _amount, _minMintAmount);
 
-        emit MintRequestCreated(
-            request.id,
-            request.provider,
-            request.token,
-            request.amount,
-            request.minExpectedAmount
-        );
+        emit MintRequestCreated(request.id, request.provider, request.token, request.amount, request.minExpectedAmount);
     }
 
     function requestMintWithPermit(
@@ -166,17 +161,16 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
         emit MintRequestCancelled(_id);
     }
 
-    function completeMint(
-        bytes32 _idempotencyKey,
-        uint256 _id,
-        uint256 _mintAmount
-    ) external onlyRole(SERVICE_ROLE) mintRequestExist(_id) {
+    function completeMint(bytes32 _idempotencyKey, uint256 _id, uint256 _mintAmount)
+        external
+        onlyRole(SERVICE_ROLE)
+        mintRequestExist(_id)
+    {
         Request storage request = mintRequests[_id];
         _assertState(State.CREATED, request.state);
-        if (_mintAmount < request.minExpectedAmount) revert InsufficientMintAmount(
-            _mintAmount,
-            request.minExpectedAmount
-        );
+        if (_mintAmount < request.minExpectedAmount) {
+            revert InsufficientMintAmount(_mintAmount, request.minExpectedAmount);
+        }
 
         request.state = State.COMPLETED;
 
@@ -189,29 +183,20 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
         emit MintRequestCompleted(_idempotencyKey, _id, _mintAmount);
     }
 
-    function requestBurn(
-        uint256 _issueTokenAmount,
-        address _withdrawalTokenAddress,
-        uint256 _minWithdrawalAmount
-    ) public onlyAllowedProviders allowedToken(_withdrawalTokenAddress) whenNotPaused {
+    function requestBurn(uint256 _issueTokenAmount, address _withdrawalTokenAddress, uint256 _minWithdrawalAmount)
+        public
+        onlyAllowedProviders
+        allowedToken(_withdrawalTokenAddress)
+        whenNotPaused
+    {
         _assertAmount(_issueTokenAmount);
 
         IERC20 issueToken = IERC20(ISSUE_TOKEN_ADDRESS);
         issueToken.safeTransferFrom(msg.sender, address(this), _issueTokenAmount);
 
-        Request memory request = _addBurnRequest(
-            _withdrawalTokenAddress,
-            _issueTokenAmount,
-            _minWithdrawalAmount
-        );
+        Request memory request = _addBurnRequest(_withdrawalTokenAddress, _issueTokenAmount, _minWithdrawalAmount);
 
-        emit BurnRequestCreated(
-            request.id,
-            request.provider,
-            request.token,
-            request.amount,
-            request.minExpectedAmount
-        );
+        emit BurnRequestCreated(request.id, request.provider, request.token, request.amount, request.minExpectedAmount);
     }
 
     function requestBurnWithPermit(
@@ -242,17 +227,16 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
         emit BurnRequestCancelled(_id);
     }
 
-    function completeBurn(
-        bytes32 _idempotencyKey,
-        uint256 _id,
-        uint256 _withdrawalAmount
-    ) external onlyRole(SERVICE_ROLE) burnRequestExist(_id) {
+    function completeBurn(bytes32 _idempotencyKey, uint256 _id, uint256 _withdrawalAmount)
+        external
+        onlyRole(SERVICE_ROLE)
+        burnRequestExist(_id)
+    {
         Request storage request = burnRequests[_id];
         _assertState(State.CREATED, request.state);
-        if (_withdrawalAmount < request.minExpectedAmount) revert InsufficientWithdrawalAmount(
-            _withdrawalAmount,
-            request.minExpectedAmount
-        );
+        if (_withdrawalAmount < request.minExpectedAmount) {
+            revert InsufficientWithdrawalAmount(_withdrawalAmount, request.minExpectedAmount);
+        }
 
         request.state = State.COMPLETED;
 
@@ -272,11 +256,10 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
         emit EmergencyWithdrawn(address(_token), balance);
     }
 
-    function _addMintRequest(
-        address _tokenAddress,
-        uint256 _amount,
-        uint256 _minExpectedAmount
-    ) internal returns (Request memory mintRequest) {
+    function _addMintRequest(address _tokenAddress, uint256 _amount, uint256 _minExpectedAmount)
+        internal
+        returns (Request memory mintRequest)
+    {
         uint256 id = mintRequestsCounter;
         mintRequest = Request({
             id: id,
@@ -288,16 +271,17 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
         });
         mintRequests[id] = mintRequest;
 
-        unchecked {mintRequestsCounter++;}
+        unchecked {
+            mintRequestsCounter++;
+        }
 
         return mintRequest;
     }
 
-    function _addBurnRequest(
-        address _tokenAddress,
-        uint256 _amount,
-        uint256 _minWithdrawalAmount
-    ) internal returns (Request memory burnRequest) {
+    function _addBurnRequest(address _tokenAddress, uint256 _amount, uint256 _minWithdrawalAmount)
+        internal
+        returns (Request memory burnRequest)
+    {
         uint256 id = burnRequestsCounter;
         burnRequest = Request({
             id: id,
@@ -309,7 +293,9 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
         });
         burnRequests[id] = burnRequest;
 
-        unchecked {burnRequestsCounter++;}
+        unchecked {
+            burnRequestsCounter++;
+        }
 
         return burnRequest;
     }
@@ -330,5 +316,4 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
     function _assertAmount(uint256 _amount) internal pure {
         if (_amount == 0) revert InvalidAmount(_amount);
     }
-
 }

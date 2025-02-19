@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import {AccessControlDefaultAdminRules} from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
+import {AccessControlDefaultAdminRules} from
+    "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ISimpleToken} from "../interfaces/ISimpleToken.sol";
 import {IRewardDistributor} from "../interfaces/IRewardDistributor.sol";
 import {IERC20Rebasing} from "../interfaces/IERC20Rebasing.sol";
 
 contract RewardDistributor is IRewardDistributor, AccessControlDefaultAdminRules, Pausable {
-
     bytes32 public constant SERVICE_ROLE = keccak256("SERVICE_ROLE");
 
     address public immutable ST_USF_ADDRESS;
@@ -25,21 +25,20 @@ contract RewardDistributor is IRewardDistributor, AccessControlDefaultAdminRules
         distributeIds[idempotencyKey] = true;
     }
 
-    constructor(
-        address _stUSFAddress,
-        address _feeCollectorAddress,
-        address _tokenAddress
-    ) AccessControlDefaultAdminRules(1 days, msg.sender) {
+    constructor(address _stUSFAddress, address _feeCollectorAddress, address _tokenAddress)
+        AccessControlDefaultAdminRules(1 days, msg.sender)
+    {
         ST_USF_ADDRESS = _assertNonZero(_stUSFAddress);
         feeCollectorAddress = _assertNonZero(_feeCollectorAddress);
         TOKEN_ADDRESS = _assertNonZero(_tokenAddress);
     }
 
-    function distribute(
-        bytes32 _idempotencyKey,
-        uint256 _stakingReward,
-        uint256 _feeReward
-    ) external onlyRole(SERVICE_ROLE) idempotent(_idempotencyKey) whenNotPaused {
+    function distribute(bytes32 _idempotencyKey, uint256 _stakingReward, uint256 _feeReward)
+        external
+        onlyRole(SERVICE_ROLE)
+        idempotent(_idempotencyKey)
+        whenNotPaused
+    {
         if (_stakingReward == 0) revert InvalidAmount(_stakingReward);
 
         IERC20Rebasing stUSF = IERC20Rebasing(ST_USF_ADDRESS);
@@ -53,14 +52,7 @@ contract RewardDistributor is IRewardDistributor, AccessControlDefaultAdminRules
 
         token.mint(feeCollectorAddress, _feeReward);
 
-        emit RewardDistributed(
-            _idempotencyKey,
-            totalShares,
-            totalUSFBefore,
-            totalUSFAfter,
-            _stakingReward,
-            _feeReward
-        );
+        emit RewardDistributed(_idempotencyKey, totalShares, totalUSFBefore, totalUSFAfter, _stakingReward, _feeReward);
     }
 
     function setFeeCollector(address _feeCollectorAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {

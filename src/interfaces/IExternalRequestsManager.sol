@@ -5,13 +5,8 @@ import {IDefaultErrors} from "./IDefaultErrors.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IExternalRequestsManager is IDefaultErrors {
-
     event MintRequestCreated(
-        uint256 indexed id,
-        address indexed provider,
-        address depositToken,
-        uint256 amount,
-        uint256 minMintAmount
+        uint256 indexed id, address indexed provider, address depositToken, uint256 amount, uint256 minMintAmount
     );
     event MintRequestCompleted(bytes32 indexed idempotencyKey, uint256 indexed id, uint256 mintedAmount);
     event MintRequestCancelled(uint256 indexed id);
@@ -44,7 +39,12 @@ interface IExternalRequestsManager is IDefaultErrors {
     error InsufficientMintAmount(uint256 mintAmount, uint256 minMintAmount);
     error InsufficientWithdrawalAmount(uint256 withdrawalAmount, uint256 minWithdrawalAmount);
 
-    enum State {CREATED, COMPLETED, CANCELLED}
+    enum State {
+        CREATED,
+        COMPLETED,
+        CANCELLED
+    }
+
     struct Request {
         uint256 id;
         address provider;
@@ -68,11 +68,7 @@ interface IExternalRequestsManager is IDefaultErrors {
 
     function unpause() external;
 
-    function requestMint(
-        address _depositTokenAddress,
-        uint256 _amount,
-        uint256 _minMintAmount
-    ) external;
+    function requestMint(address _depositTokenAddress, uint256 _amount, uint256 _minMintAmount) external;
 
     function requestMintWithPermit(
         address _depositTokenAddress,
@@ -88,11 +84,8 @@ interface IExternalRequestsManager is IDefaultErrors {
 
     function completeMint(bytes32 _idempotencyKey, uint256 _id, uint256 _mintAmount) external;
 
-    function requestBurn(
-        uint256 _issueTokenAmount,
-        address _withdrawalTokenAddress,
-        uint256 _minWithdrawalAmount
-    ) external;
+    function requestBurn(uint256 _issueTokenAmount, address _withdrawalTokenAddress, uint256 _minWithdrawalAmount)
+        external;
 
     function requestBurnWithPermit(
         uint256 _issueTokenAmount,

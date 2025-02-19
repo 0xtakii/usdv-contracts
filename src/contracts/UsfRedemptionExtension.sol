@@ -2,7 +2,8 @@
 pragma solidity ^0.8.25;
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {AccessControlDefaultAdminRules} from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
+import {AccessControlDefaultAdminRules} from
+    "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ISimpleToken} from "../interfaces/ISimpleToken.sol";
@@ -12,10 +13,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IChainlinkOracle} from "../interfaces/oracles/IChainlinkOracle.sol";
 import {IUsfPriceStorage} from "../interfaces/IUsfPriceStorage.sol";
 
-import {console2} from "forge-std/Test.sol";
-
 contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefaultAdminRules, Pausable {
-
     using SafeERC20 for IERC20;
 
     bytes32 public constant SERVICE_ROLE = keccak256("SERVICE_ROLE");
@@ -66,8 +64,9 @@ contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefault
         }
 
         currentRedemptionUsage = 0;
-        if (_lastResetTime < block.timestamp ||
-            _lastResetTime > block.timestamp + 1 days) revert InvalidLastResetTime(_lastResetTime);
+        if (_lastResetTime < block.timestamp || _lastResetTime > block.timestamp + 1 days) {
+            revert InvalidLastResetTime(_lastResetTime);
+        }
         lastResetTime = _lastResetTime;
     }
 
@@ -83,16 +82,20 @@ contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefault
         redeem(_amount, msg.sender, _withdrawalTokenAddress);
     }
 
-    function removeAllowedWithdrawalToken(
-        address _allowedWithdrawalTokenAddress
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) allowedWithdrawalToken(_allowedWithdrawalTokenAddress) {
+    function removeAllowedWithdrawalToken(address _allowedWithdrawalTokenAddress)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        allowedWithdrawalToken(_allowedWithdrawalTokenAddress)
+    {
         allowedWithdrawalTokens[_allowedWithdrawalTokenAddress] = false;
         emit AllowedWithdrawalTokenRemoved(_allowedWithdrawalTokenAddress);
     }
 
     function addAllowedWithdrawalToken(address _allowedWithdrawalTokenAddress) public onlyRole(DEFAULT_ADMIN_ROLE) {
         _assertNonZero(_allowedWithdrawalTokenAddress);
-        if (allowedWithdrawalTokens[_allowedWithdrawalTokenAddress]) revert TokenAlreadyAllowed(_allowedWithdrawalTokenAddress);
+        if (allowedWithdrawalTokens[_allowedWithdrawalTokenAddress]) {
+            revert TokenAlreadyAllowed(_allowedWithdrawalTokenAddress);
+        }
         if (_allowedWithdrawalTokenAddress.code.length == 0) revert InvalidTokenAddress(_allowedWithdrawalTokenAddress);
         allowedWithdrawalTokens[_allowedWithdrawalTokenAddress] = true;
         emit AllowedWithdrawalTokenAdded(_allowedWithdrawalTokenAddress);
@@ -116,7 +119,10 @@ contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefault
         emit UsfPriceStorageSet(_usfPriceStorage);
     }
 
-    function setUsfPriceStorageHeartbeatInterval(uint256 _usfPriceStorageHeartbeatInterval) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setUsfPriceStorageHeartbeatInterval(uint256 _usfPriceStorageHeartbeatInterval)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         _assertNonZero(_usfPriceStorageHeartbeatInterval);
         usfPriceStorageHeartbeatInterval = _usfPriceStorageHeartbeatInterval;
         emit UsfPriceStorageHeartbeatIntervalSet(_usfPriceStorageHeartbeatInterval);
@@ -129,11 +135,13 @@ contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefault
     }
 
     // slither-disable-start pess-multiple-storage-read
-    function redeem(
-        uint256 _amount,
-        address _receiver,
-        address _withdrawalTokenAddress
-    ) public whenNotPaused allowedWithdrawalToken(_withdrawalTokenAddress) onlyRole(SERVICE_ROLE) returns (uint256 withdrawalTokenAmount) {
+    function redeem(uint256 _amount, address _receiver, address _withdrawalTokenAddress)
+        public
+        whenNotPaused
+        allowedWithdrawalToken(_withdrawalTokenAddress)
+        onlyRole(SERVICE_ROLE)
+        returns (uint256 withdrawalTokenAmount)
+    {
         _assertNonZero(_amount);
         _assertNonZero(_receiver);
 
@@ -155,62 +163,46 @@ contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefault
         }
 
         bytes32 idempotencyKey = generateIdempotencyKey();
-        ISimpleToken(USF_TOKEN_ADDRESS).burn(
-            idempotencyKey,
-            msg.sender,
-            _amount
-        );
+        ISimpleToken(USF_TOKEN_ADDRESS).burn(idempotencyKey, msg.sender, _amount);
 
         uint8 withdrawalTokenDecimals = IERC20Metadata(_withdrawalTokenAddress).decimals();
         // slither-disable-next-line unused-return
-        (,int256 redeemPrice,,,) = getRedeemPrice(_withdrawalTokenAddress);
+        (, int256 redeemPrice,,,) = getRedeemPrice(_withdrawalTokenAddress);
         if (withdrawalTokenDecimals > USF_DECIMALS) {
             // slither-disable-next-line pess-dubious-typecast
             // slither-disable-next-line divide-before-multiply
-            withdrawalTokenAmount = (_amount * (10 ** USF_DECIMALS) / uint256(redeemPrice))
-                * 10 ** (withdrawalTokenDecimals - USF_DECIMALS);
+            withdrawalTokenAmount =
+                (_amount * (10 ** USF_DECIMALS) / uint256(redeemPrice)) * 10 ** (withdrawalTokenDecimals - USF_DECIMALS);
         } else {
             // slither-disable-next-line pess-dubious-typecast
-            withdrawalTokenAmount = (_amount * (10 ** USF_DECIMALS) / uint256(redeemPrice))
-                / 10 ** (USF_DECIMALS - withdrawalTokenDecimals);
+            withdrawalTokenAmount =
+                (_amount * (10 ** USF_DECIMALS) / uint256(redeemPrice)) / 10 ** (USF_DECIMALS - withdrawalTokenDecimals);
         }
 
         IERC20 withdrawalToken = IERC20(_withdrawalTokenAddress);
         uint256 treasuryWithdrawalTokenBalance = withdrawalToken.balanceOf(address(treasury));
 
         if (treasuryWithdrawalTokenBalance < withdrawalTokenAmount) {
-            revert NotEnoughTokensForRedemption(_withdrawalTokenAddress, withdrawalTokenAmount, treasuryWithdrawalTokenBalance);
+            revert NotEnoughTokensForRedemption(
+                _withdrawalTokenAddress, withdrawalTokenAmount, treasuryWithdrawalTokenBalance
+            );
         }
 
         // slither-disable-next-line arbitrary-send-erc20
         withdrawalToken.safeTransferFrom(address(treasury), _receiver, withdrawalTokenAmount);
 
-        emit Redeemed(
-            msg.sender,
-            _receiver,
-            _amount,
-            _withdrawalTokenAddress,
-            withdrawalTokenAmount
-        );
+        emit Redeemed(msg.sender, _receiver, _amount, _withdrawalTokenAddress, withdrawalTokenAmount);
 
         return withdrawalTokenAmount;
     }
 
-    function getRedeemPrice(address _withdrawalTokenAddress) public view returns (
-        uint80 roundId,
-        int256 price,
-        uint256 startedAt,
-        uint256 updatedAt,
-        uint80 answeredInRound
-    ) {
+    function getRedeemPrice(address _withdrawalTokenAddress)
+        public
+        view
+        returns (uint80 roundId, int256 price, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
+    {
         IChainlinkOracle oracle = chainlinkOracle;
-        (
-            roundId,
-            price,
-            startedAt,
-            updatedAt,
-            answeredInRound
-        ) = oracle.getLatestRoundData(_withdrawalTokenAddress);
+        (roundId, price, startedAt, updatedAt, answeredInRound) = oracle.getLatestRoundData(_withdrawalTokenAddress);
         uint8 priceDecimals = oracle.priceDecimals(_withdrawalTokenAddress);
 
         if (priceDecimals > USF_DECIMALS) {
@@ -227,14 +219,16 @@ contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefault
 
     function generateIdempotencyKey() internal returns (bytes32 idempotencyKey) {
         idempotencyKey = keccak256(abi.encodePacked(IDEMPOTENCY_KEY_PREFIX, redeemCounter));
-        unchecked {redeemCounter++;}
+        unchecked {
+            redeemCounter++;
+        }
 
         return idempotencyKey;
     }
 
     function getUSFPrice() internal view returns (uint256 usfPrice) {
         // slither-disable-next-line unused-return
-        (uint256 price,,,uint256 timestamp) = usfPriceStorage.lastPrice();
+        (uint256 price,,, uint256 timestamp) = usfPriceStorage.lastPrice();
         if (timestamp + usfPriceStorageHeartbeatInterval < block.timestamp) {
             revert UsfPriceHeartbeatIntervalCheckFailed();
         }

@@ -18,11 +18,7 @@ contract StUSF is ERC20RebasingPermitUpgradeable, IStUSF, IDefaultErrors {
         _disableInitializers();
     }
 
-    function initialize(
-        string memory _name,
-        string memory _symbol,
-        address _usfAddress
-    ) public initializer {
+    function initialize(string memory _name, string memory _symbol, address _usfAddress) public initializer {
         _assertNonZero(_usfAddress);
 
         __ERC20Rebasing_init(_name, _symbol, _usfAddress);
@@ -60,13 +56,7 @@ contract StUSF is ERC20RebasingPermitUpgradeable, IStUSF, IDefaultErrors {
         deposit(_usfAmount, _receiver);
     }
 
-    function depositWithPermit(
-        uint256 _usfAmount,
-        uint256 _deadline,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
-    ) external {
+    function depositWithPermit(uint256 _usfAmount, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external {
         depositWithPermit(_usfAmount, msg.sender, _deadline, _v, _r, _s);
     }
 
@@ -97,5 +87,5 @@ contract StUSF is ERC20RebasingPermitUpgradeable, IStUSF, IDefaultErrors {
 
     function _assertNonZero(address _address) internal pure {
         if (_address == address(0)) revert ZeroAddress();
-    }    
+    }
 }

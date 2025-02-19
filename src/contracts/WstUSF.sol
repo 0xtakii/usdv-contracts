@@ -4,7 +4,8 @@ pragma solidity ^0.8.25;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {ERC20PermitUpgradeable} from "@openzeppelin-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import {ERC20PermitUpgradeable} from
+    "@openzeppelin-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {IStUSF} from "../interfaces/IStUSF.sol";
 import {IDefaultErrors} from "../interfaces/IDefaultErrors.sol";
 import {IERC20Rebasing} from "../interfaces/IERC20Rebasing.sol";
@@ -12,7 +13,6 @@ import {IWstUSF} from "../interfaces/IWstUSF.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
 contract WstUSF is IWstUSF, ERC20PermitUpgradeable, IDefaultErrors {
-
     using Math for uint256;
     using SafeERC20 for IERC20;
 
@@ -26,11 +26,7 @@ contract WstUSF is IWstUSF, ERC20PermitUpgradeable, IDefaultErrors {
         _disableInitializers();
     }
 
-    function initialize(
-        string memory _name,
-        string memory _symbol,
-        address _stUSFAddress
-    ) public initializer {
+    function initialize(string memory _name, string memory _symbol, address _stUSFAddress) public initializer {
         __ERC20_init(_name, _symbol);
         __ERC20Permit_init(_name);
 
@@ -82,9 +78,7 @@ contract WstUSF is IWstUSF, ERC20PermitUpgradeable, IDefaultErrors {
         IERC20Rebasing stUSF = IERC20Rebasing(stUSFAddress);
 
         return (_wstUSFAmount * ST_USF_SHARES_OFFSET).mulDiv(
-            stUSF.totalSupply() + 1,
-            stUSF.totalShares() + ST_USF_SHARES_OFFSET,
-            Math.Rounding.Ceil
+            stUSF.totalSupply() + 1, stUSF.totalShares() + ST_USF_SHARES_OFFSET, Math.Rounding.Ceil
         );
     }
 
@@ -96,9 +90,7 @@ contract WstUSF is IWstUSF, ERC20PermitUpgradeable, IDefaultErrors {
         IERC20Rebasing stUSF = IERC20Rebasing(stUSFAddress);
 
         return (_wstUSFAmount * ST_USF_SHARES_OFFSET).mulDiv(
-            stUSF.totalSupply() + 1,
-            stUSF.totalShares() + ST_USF_SHARES_OFFSET,
-            Math.Rounding.Floor
+            stUSF.totalSupply() + 1, stUSF.totalShares() + ST_USF_SHARES_OFFSET, Math.Rounding.Floor
         );
     }
 
@@ -236,13 +228,9 @@ contract WstUSF is IWstUSF, ERC20PermitUpgradeable, IDefaultErrors {
         return unwrap(_wstUSFAmount, msg.sender);
     }
 
-    function _withdraw(
-        address _caller,
-        address _receiver,
-        address _owner,
-        uint256 _usfAmount,
-        uint256 _wstUSFAmount
-    ) internal {
+    function _withdraw(address _caller, address _receiver, address _owner, uint256 _usfAmount, uint256 _wstUSFAmount)
+        internal
+    {
         if (_caller != _owner) {
             _spendAllowance(_owner, _caller, _wstUSFAmount);
         }
@@ -255,12 +243,7 @@ contract WstUSF is IWstUSF, ERC20PermitUpgradeable, IDefaultErrors {
         emit Withdraw(msg.sender, _receiver, _owner, _usfAmount, _wstUSFAmount);
     }
 
-    function _deposit(
-        address _caller,
-        address _receiver,
-        uint256 _usfAmount,
-        uint256 _wstUSFAmount
-    ) internal {
+    function _deposit(address _caller, address _receiver, uint256 _usfAmount, uint256 _wstUSFAmount) internal {
         IStUSF stUSF = IStUSF(stUSFAddress);
         IERC20 usf = IERC20(usfAddress);
 

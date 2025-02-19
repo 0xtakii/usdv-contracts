@@ -5,7 +5,6 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {IAddressesWhitelist} from "../interfaces/IAddressesWhitelist.sol";
 
 contract AddressesWhitelist is IAddressesWhitelist, Ownable2Step {
-
     mapping(address account => bool isAllowed) private allowedAccounts;
 
     constructor() Ownable(msg.sender) {}

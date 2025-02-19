@@ -4,7 +4,6 @@ pragma solidity ^0.8.25;
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 interface IWstUSF is IERC4626 {
-
     event Wrap(address indexed _sender, address indexed _receiver, uint256 _stUSRAmount, uint256 _wstUSRAmount);
     event Unwrap(address indexed _sender, address indexed _receiver, uint256 _stUSRAmount, uint256 _wstUSRAmount);
 

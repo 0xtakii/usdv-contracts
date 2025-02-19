@@ -2,10 +2,10 @@
 pragma solidity ^0.8.25;
 
 import {IFlpPriceStorage} from "../interfaces/IFlpPriceStorage.sol";
-import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin-upgradeable/contracts/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
+import {AccessControlDefaultAdminRulesUpgradeable} from
+    "@openzeppelin-upgradeable/contracts/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 
 contract FlpPriceStorage is IFlpPriceStorage, AccessControlDefaultAdminRulesUpgradeable {
-
     bytes32 public constant SERVICE_ROLE = keccak256("SERVICE_ROLE");
     uint256 public constant BOUND_PERCENTAGE_DENOMINATOR = 1e18;
 
@@ -35,39 +35,34 @@ contract FlpPriceStorage is IFlpPriceStorage, AccessControlDefaultAdminRulesUpgr
         }
 
         uint256 currentTime = block.timestamp;
-        Price memory price = Price({
-            price: _price,
-            timestamp: currentTime
-        });
+        Price memory price = Price({price: _price, timestamp: currentTime});
         prices[_key] = price;
         lastPrice = price;
 
         emit PriceSet(_key, _price, currentTime);
     }
 
-    function initialize(
-        uint256 _upperBoundPercentage,
-        uint256 _lowerBoundPercentage
-    ) public initializer {
+    function initialize(uint256 _upperBoundPercentage, uint256 _lowerBoundPercentage) public initializer {
         __AccessControlDefaultAdminRules_init(1 days, msg.sender);
         setUpperBoundPercentage(_upperBoundPercentage);
         setLowerBoundPercentage(_lowerBoundPercentage);
     }
 
     function setUpperBoundPercentage(uint256 _upperBoundPercentage) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (_upperBoundPercentage == 0
-            || _upperBoundPercentage > BOUND_PERCENTAGE_DENOMINATOR) revert InvalidUpperBoundPercentage();
+        if (_upperBoundPercentage == 0 || _upperBoundPercentage > BOUND_PERCENTAGE_DENOMINATOR) {
+            revert InvalidUpperBoundPercentage();
+        }
 
         upperBoundPercentage = _upperBoundPercentage;
         emit UpperBoundPercentageSet(_upperBoundPercentage);
     }
 
     function setLowerBoundPercentage(uint256 _lowerBoundPercentage) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (_lowerBoundPercentage == 0
-            || _lowerBoundPercentage > BOUND_PERCENTAGE_DENOMINATOR) revert InvalidLowerBoundPercentage();
+        if (_lowerBoundPercentage == 0 || _lowerBoundPercentage > BOUND_PERCENTAGE_DENOMINATOR) {
+            revert InvalidLowerBoundPercentage();
+        }
 
         lowerBoundPercentage = _lowerBoundPercentage;
         emit LowerBoundPercentageSet(_lowerBoundPercentage);
     }
-
 }

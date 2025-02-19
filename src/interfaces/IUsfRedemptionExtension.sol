@@ -6,7 +6,6 @@ import {IChainlinkOracle} from "./oracles/IChainlinkOracle.sol";
 import {IDefaultErrors} from "./IDefaultErrors.sol";
 
 interface IUsfRedemptionExtension is IDefaultErrors {
-
     event TreasurySet(address _treasuryAddress);
     event ChainlinkOracleSet(address _chainlinkOracleAddress);
     event UsfPriceStorageSet(address _usfPriceStorageAddress);
@@ -50,19 +49,14 @@ interface IUsfRedemptionExtension is IDefaultErrors {
 
     function unpause() external;
 
-    function redeem(
-        uint256 _amount,
-        address _receiver,
-        address _withdrawalTokenAddress
-    ) external returns (uint256 withdrawalTokenAmount);
+    function redeem(uint256 _amount, address _receiver, address _withdrawalTokenAddress)
+        external
+        returns (uint256 withdrawalTokenAmount);
 
     function redeem(uint256 _amount, address _withdrawalTokenAddress) external;
 
-    function getRedeemPrice(address _withdrawalTokenAddress) external view returns (
-        uint80 roundId,
-        int256 price,
-        uint256 startedAt,
-        uint256 updatedAt,
-        uint80 answeredInRound
-    );
+    function getRedeemPrice(address _withdrawalTokenAddress)
+        external
+        view
+        returns (uint80 roundId, int256 price, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
 }

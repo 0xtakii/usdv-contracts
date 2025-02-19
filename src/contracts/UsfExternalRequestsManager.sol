@@ -4,7 +4,8 @@ pragma solidity ^0.8.25;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {AccessControlDefaultAdminRules} from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
+import {AccessControlDefaultAdminRules} from
+    "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ISimpleToken} from "../interfaces/ISimpleToken.sol";
 import {IUsfExternalRequestsManager} from "../interfaces/IUsfExternalRequestsManager.sol";
@@ -12,7 +13,6 @@ import {IAddressesWhitelist} from "../interfaces/IAddressesWhitelist.sol";
 import {IUsfRedemptionExtension} from "../interfaces/IUsfRedemptionExtension.sol";
 
 contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessControlDefaultAdminRules, Pausable {
-
     using SafeERC20 for IERC20;
 
     bytes32 public constant SERVICE_ROLE = keccak256("SERVICE_ROLE");
@@ -81,7 +81,7 @@ contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessContro
             allowedTokens[allowedTokenAddress] = true;
         }
 
-        isWhitelistEnabled = true;
+        // isWhitelistEnabled = false;
     }
 
     function setTreasury(address _treasuryAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -102,7 +102,10 @@ contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessContro
         emit WhitelistEnabledSet(_isEnabled);
     }
 
-    function setUsfRedemptionExtension(IUsfRedemptionExtension _usfRedemptionExtension) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setUsfRedemptionExtension(IUsfRedemptionExtension _usfRedemptionExtension)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         _assertNonZero(address(_usfRedemptionExtension));
         usfRedemptionExtension = _usfRedemptionExtension;
         emit UsfRedemptionExtensionSet(address(_usfRedemptionExtension));
@@ -129,23 +132,18 @@ contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessContro
         Pausable._unpause();
     }
 
-    function requestMint(
-        address _depositTokenAddress,
-        uint256 _amount,
-        uint256 _minMintAmount
-    ) public onlyAllowedProviders allowedToken(_depositTokenAddress) whenNotPaused {
+    function requestMint(address _depositTokenAddress, uint256 _amount, uint256 _minMintAmount)
+        public
+        onlyAllowedProviders
+        allowedToken(_depositTokenAddress)
+        whenNotPaused
+    {
         _assertAmount(_amount);
 
         IERC20(_depositTokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
         Request memory request = _addMintRequest(_depositTokenAddress, _amount, _minMintAmount);
 
-        emit MintRequestCreated(
-            request.id,
-            request.provider,
-            request.token,
-            request.amount,
-            request.minExpectedAmount
-        );
+        emit MintRequestCreated(request.id, request.provider, request.token, request.amount, request.minExpectedAmount);
     }
 
     // solhint-disable-next-line ordering
@@ -178,17 +176,16 @@ contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessContro
         emit MintRequestCancelled(_id);
     }
 
-    function completeMint(
-        bytes32 _idempotencyKey,
-        uint256 _id,
-        uint256 _mintAmount
-    ) external onlyRole(SERVICE_ROLE) mintRequestExist(_id) {
+    function completeMint(bytes32 _idempotencyKey, uint256 _id, uint256 _mintAmount)
+        external
+        onlyRole(SERVICE_ROLE)
+        mintRequestExist(_id)
+    {
         Request storage request = mintRequests[_id];
         _assertState(State.CREATED, request.state);
-        if (_mintAmount < request.minExpectedAmount) revert InsufficientMintAmount(
-            _mintAmount,
-            request.minExpectedAmount
-        );
+        if (_mintAmount < request.minExpectedAmount) {
+            revert InsufficientMintAmount(_mintAmount, request.minExpectedAmount);
+        }
 
         request.state = State.COMPLETED;
 
@@ -201,29 +198,20 @@ contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessContro
         emit MintRequestCompleted(_idempotencyKey, _id, _mintAmount);
     }
 
-    function requestBurn(
-        uint256 _issueTokenAmount,
-        address _withdrawalTokenAddress,
-        uint256 _minWithdrawalAmount
-    ) public onlyAllowedProviders allowedToken(_withdrawalTokenAddress) whenNotPaused {
+    function requestBurn(uint256 _issueTokenAmount, address _withdrawalTokenAddress, uint256 _minWithdrawalAmount)
+        public
+        onlyAllowedProviders
+        allowedToken(_withdrawalTokenAddress)
+        whenNotPaused
+    {
         _assertAmount(_issueTokenAmount);
 
         IERC20 issueToken = IERC20(ISSUE_TOKEN_ADDRESS);
         issueToken.safeTransferFrom(msg.sender, address(this), _issueTokenAmount);
 
-        Request memory request = _addBurnRequest(
-            _withdrawalTokenAddress,
-            _issueTokenAmount,
-            _minWithdrawalAmount
-        );
+        Request memory request = _addBurnRequest(_withdrawalTokenAddress, _issueTokenAmount, _minWithdrawalAmount);
 
-        emit BurnRequestCreated(
-            request.id,
-            request.provider,
-            request.token,
-            request.amount,
-            request.minExpectedAmount
-        );
+        emit BurnRequestCreated(request.id, request.provider, request.token, request.amount, request.minExpectedAmount);
     }
 
     function requestBurnWithPermit(
@@ -254,17 +242,16 @@ contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessContro
         emit BurnRequestCancelled(_id);
     }
 
-    function completeBurn(
-        bytes32 _idempotencyKey,
-        uint256 _id,
-        uint256 _withdrawalAmount
-    ) external onlyRole(SERVICE_ROLE) burnRequestExist(_id) {
+    function completeBurn(bytes32 _idempotencyKey, uint256 _id, uint256 _withdrawalAmount)
+        external
+        onlyRole(SERVICE_ROLE)
+        burnRequestExist(_id)
+    {
         Request storage request = burnRequests[_id];
         _assertState(State.CREATED, request.state);
-        if (_withdrawalAmount < request.minExpectedAmount) revert InsufficientWithdrawalAmount(
-            _withdrawalAmount,
-            request.minExpectedAmount
-        );
+        if (_withdrawalAmount < request.minExpectedAmount) {
+            revert InsufficientWithdrawalAmount(_withdrawalAmount, request.minExpectedAmount);
+        }
 
         request.state = State.COMPLETED;
 
@@ -308,18 +295,13 @@ contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessContro
         emit Redeemed(msg.sender, _receiver, _amount, _withdrawalTokenAddress, _minExpectedAmount);
     }
 
-    function redeem(
-        uint256 _amount,
-        address _receiver,
-        address _withdrawalTokenAddress,
-        uint256 _minExpectedAmount
-    ) public whenNotPaused onlyAllowedProviders {
+    function redeem(uint256 _amount, address _receiver, address _withdrawalTokenAddress, uint256 _minExpectedAmount)
+        public
+        whenNotPaused
+        onlyAllowedProviders
+    {
         IERC20(ISSUE_TOKEN_ADDRESS).safeTransferFrom(msg.sender, address(this), _amount);
-        uint256 withdrawalTokenAmount = usfRedemptionExtension.redeem(
-            _amount,
-            _receiver,
-            _withdrawalTokenAddress
-        );
+        uint256 withdrawalTokenAmount = usfRedemptionExtension.redeem(_amount, _receiver, _withdrawalTokenAddress);
         if (withdrawalTokenAmount < _minExpectedAmount) {
             revert InsufficientRedeemAmount(_minExpectedAmount, withdrawalTokenAmount);
         }
@@ -327,11 +309,10 @@ contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessContro
         emit Redeemed(msg.sender, _receiver, _amount, _withdrawalTokenAddress, _minExpectedAmount);
     }
 
-    function _addMintRequest(
-        address _tokenAddress,
-        uint256 _amount,
-        uint256 _minExpectedAmount
-    ) internal returns (Request memory mintRequest) {
+    function _addMintRequest(address _tokenAddress, uint256 _amount, uint256 _minExpectedAmount)
+        internal
+        returns (Request memory mintRequest)
+    {
         uint256 id = mintRequestsCounter;
         mintRequest = Request({
             id: id,
@@ -343,16 +324,17 @@ contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessContro
         });
         mintRequests[id] = mintRequest;
 
-        unchecked {mintRequestsCounter++;}
+        unchecked {
+            mintRequestsCounter++;
+        }
 
         return mintRequest;
     }
 
-    function _addBurnRequest(
-        address _tokenAddress,
-        uint256 _amount,
-        uint256 _minWithdrawalAmount
-    ) internal returns (Request memory burnRequest) {
+    function _addBurnRequest(address _tokenAddress, uint256 _amount, uint256 _minWithdrawalAmount)
+        internal
+        returns (Request memory burnRequest)
+    {
         uint256 id = burnRequestsCounter;
         burnRequest = Request({
             id: id,
@@ -364,7 +346,9 @@ contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessContro
         });
         burnRequests[id] = burnRequest;
 
-        unchecked {burnRequestsCounter++;}
+        unchecked {
+            burnRequestsCounter++;
+        }
 
         return burnRequest;
     }
@@ -385,5 +369,4 @@ contract UsfExternalRequestsManager is IUsfExternalRequestsManager, AccessContro
     function _assertAmount(uint256 _amount) internal pure {
         if (_amount == 0) revert InvalidAmount(_amount);
     }
-
 }

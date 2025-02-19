@@ -2,7 +2,6 @@
 pragma solidity ^0.8.25;
 
 interface IChainlinkOracle {
-
     event HeartbeatIntervalSet(address indexed tokenAddress, uint48 heartbeatInterval);
     event FeedRegistrySet(address indexed feedRegistry);
 
@@ -13,13 +12,10 @@ interface IChainlinkOracle {
 
     function getPrice(address _tokenAddress) external view returns (uint256 price);
 
-    function getLatestRoundData(address _tokenAddress) external view returns (
-        uint80 roundId,
-        int256 price,
-        uint256 startedAt,
-        uint256 updatedAt,
-        uint80 answeredInRound
-    );
+    function getLatestRoundData(address _tokenAddress)
+        external
+        view
+        returns (uint80 roundId, int256 price, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
 
     function priceDecimals(address _tokenAddress) external view returns (uint8 decimals);
 

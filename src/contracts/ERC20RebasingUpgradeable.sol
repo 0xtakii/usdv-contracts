@@ -19,15 +19,11 @@ abstract contract ERC20RebasingUpgradeable is Initializable, ContextUpgradeable,
     /// @custom:storage-location erc7201:openzeppelin.storage.ERC20
     struct ERC20Storage {
         mapping(address account => uint256) _sharesBalances;
-
         // Allowances are nominated in underlying tokens, not shares.
         mapping(address account => mapping(address spender => uint256)) _allowances;
-
         uint256 _totalSharesSupply;
-
         string _name;
         string _symbol;
-
         IERC20Metadata _underlyingToken;
     }
 
@@ -48,20 +44,18 @@ abstract contract ERC20RebasingUpgradeable is Initializable, ContextUpgradeable,
      * construction.
      */
     // solhint-disable-next-line func-name-mixedcase
-    function __ERC20Rebasing_init(
-        string memory name_,
-        string memory symbol_,
-        address underlyingTokenAddress_
-    ) internal onlyInitializing {
+    function __ERC20Rebasing_init(string memory name_, string memory symbol_, address underlyingTokenAddress_)
+        internal
+        onlyInitializing
+    {
         __ERC20Rebasing_init_unchained(name_, symbol_, underlyingTokenAddress_);
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function __ERC20Rebasing_init_unchained(
-        string memory name_,
-        string memory symbol_,
-        address underlyingTokenAddress_
-    ) internal onlyInitializing {
+    function __ERC20Rebasing_init_unchained(string memory name_, string memory symbol_, address underlyingTokenAddress_)
+        internal
+        onlyInitializing
+    {
         ERC20Storage storage $ = _getERC20Storage();
         $._name = name_;
         $._symbol = symbol_;
@@ -267,19 +261,19 @@ abstract contract ERC20RebasingUpgradeable is Initializable, ContextUpgradeable,
                 revert ERC20InsufficientBalance(_from, fromBalance, _shares);
             }
             unchecked {
-            // Overflow not possible: shares <= fromBalance <= totalSharesSupply.
+                // Overflow not possible: shares <= fromBalance <= totalSharesSupply.
                 $._sharesBalances[_from] = fromBalance - _shares;
             }
         }
 
         if (_to == address(0)) {
             unchecked {
-            // Overflow not possible: shares <= totalSharesSupply or shares <= fromBalance <= totalSharesSupply.
+                // Overflow not possible: shares <= totalSharesSupply or shares <= fromBalance <= totalSharesSupply.
                 $._totalSharesSupply -= _shares;
             }
         } else {
             unchecked {
-            // Overflow not possible: sharesBalances + shares is at most totalSharesSupply, which we know fits into a uint256.
+                // Overflow not possible: sharesBalances + shares is at most totalSharesSupply, which we know fits into a uint256.
                 $._sharesBalances[_to] += _shares;
             }
         }
@@ -401,17 +395,19 @@ abstract contract ERC20RebasingUpgradeable is Initializable, ContextUpgradeable,
         return _convertToUnderlyingToken(_shares, Math.Rounding.Floor);
     }
 
-    function _convertToShares(
-        uint256 _underlyingTokenAmount,
-        Math.Rounding _rounding
-    ) internal view returns (uint256 shares) {
+    function _convertToShares(uint256 _underlyingTokenAmount, Math.Rounding _rounding)
+        internal
+        view
+        returns (uint256 shares)
+    {
         return _underlyingTokenAmount.mulDiv(totalShares() + 1000, _totalUnderlyingTokens() + 1, _rounding);
     }
 
-    function _convertToUnderlyingToken(
-        uint256 _shares,
-        Math.Rounding _rounding
-    ) internal view returns (uint256 underlyingTokenAmount) {
+    function _convertToUnderlyingToken(uint256 _shares, Math.Rounding _rounding)
+        internal
+        view
+        returns (uint256 underlyingTokenAmount)
+    {
         return _shares.mulDiv(_totalUnderlyingTokens() + 1, totalShares() + 1000, _rounding);
     }
 

@@ -8,18 +8,15 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IDefaultErrors} from "../../interfaces/IDefaultErrors.sol";
 
 contract ChainlinkOracle is IChainlinkOracle, IDefaultErrors, Ownable2Step {
-
     address public constant USD = address(840); // taken from chainlink Denominations library
 
     FeedRegistryInterface public feedRegistry;
     mapping(address token => uint48 heartbeatInterval) public tokenHeartbeatIntervals;
 
     // slither-disable-start pess-strange-setter
-    constructor(
-        address _feedRegistry,
-        address[] memory _tokenAddresses,
-        uint48[] memory _heartbeatIntervals
-    ) Ownable(msg.sender) {
+    constructor(address _feedRegistry, address[] memory _tokenAddresses, uint48[] memory _heartbeatIntervals)
+        Ownable(msg.sender)
+    {
         setFeedRegistry(FeedRegistryInterface(_feedRegistry));
         if (_tokenAddresses.length != _heartbeatIntervals.length) revert InvalidArrayLengths();
         for (uint256 i = 0; i < _tokenAddresses.length; i++) {
@@ -53,25 +50,16 @@ contract ChainlinkOracle is IChainlinkOracle, IDefaultErrors, Ownable2Step {
         emit HeartbeatIntervalSet(_tokenAddress, _heartbeatInterval);
     }
 
-    function getLatestRoundData(address _tokenAddress) public view returns (
-        uint80 roundId,
-        int256 price,
-        uint256 startedAt,
-        uint256 updatedAt,
-        uint80 answeredInRound
-    ) {
-        (
-            roundId,
-            price,
-            startedAt,
-            updatedAt,
-            answeredInRound
-        ) = feedRegistry.latestRoundData(_tokenAddress, USD);
+    function getLatestRoundData(address _tokenAddress)
+        public
+        view
+        returns (uint80 roundId, int256 price, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
+    {
+        (roundId, price, startedAt, updatedAt, answeredInRound) = feedRegistry.latestRoundData(_tokenAddress, USD);
 
         uint48 heartbeatInterval = tokenHeartbeatIntervals[_tokenAddress];
         if (block.timestamp - updatedAt > heartbeatInterval) revert ChainlinkOracleHeartbeatFailed();
 
         return (roundId, price, startedAt, updatedAt, answeredInRound);
     }
-
 }

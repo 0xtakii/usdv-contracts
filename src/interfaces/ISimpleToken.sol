@@ -2,7 +2,6 @@
 pragma solidity ^0.8.25;
 
 interface ISimpleToken {
-
     error IdempotencyKeyAlreadyExist(bytes32 idempotencyKey);
 
     function mint(address _account, uint256 _amount) external;

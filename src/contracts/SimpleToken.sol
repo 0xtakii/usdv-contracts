@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import {ERC20PermitUpgradeable} from "@openzeppelin-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
-import {AccessControlDefaultAdminRulesUpgradeable} from "@openzeppelin-upgradeable/contracts/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
+import {ERC20PermitUpgradeable} from
+    "@openzeppelin-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import {AccessControlDefaultAdminRulesUpgradeable} from
+    "@openzeppelin-upgradeable/contracts/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {Initializable} from "@openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
 import {ISimpleToken} from "../interfaces/ISimpleToken.sol";
 
-contract SimpleToken is ISimpleToken, Initializable, ERC20PermitUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
-
+contract SimpleToken is
+    ISimpleToken,
+    Initializable,
+    ERC20PermitUpgradeable,
+    AccessControlDefaultAdminRulesUpgradeable
+{
     bytes32 public constant SERVICE_ROLE = keccak256("SERVICE_ROLE");
 
     mapping(bytes32 => bool) private mintIds;
@@ -34,10 +40,7 @@ contract SimpleToken is ISimpleToken, Initializable, ERC20PermitUpgradeable, Acc
         _disableInitializers();
     }
 
-    function initialize(
-        string memory _name,
-        string memory _symbol
-    ) public initializer {
+    function initialize(string memory _name, string memory _symbol) public initializer {
         __ERC20_init(_name, _symbol);
         __ERC20Permit_init(_name);
 
@@ -48,8 +51,11 @@ contract SimpleToken is ISimpleToken, Initializable, ERC20PermitUpgradeable, Acc
         _mint(_account, _amount);
     }
 
-    function mint(bytes32 _idempotencyKey, address _account, uint256 _amount) external
-    onlyRole(SERVICE_ROLE) idempotentMint(_idempotencyKey) {
+    function mint(bytes32 _idempotencyKey, address _account, uint256 _amount)
+        external
+        onlyRole(SERVICE_ROLE)
+        idempotentMint(_idempotencyKey)
+    {
         _mint(_account, _amount);
     }
 
@@ -57,8 +63,11 @@ contract SimpleToken is ISimpleToken, Initializable, ERC20PermitUpgradeable, Acc
         _burn(_account, _amount);
     }
 
-    function burn(bytes32 _idempotencyKey, address _account, uint256 _amount) external
-    onlyRole(SERVICE_ROLE) idempotentBurn(_idempotencyKey) {
+    function burn(bytes32 _idempotencyKey, address _account, uint256 _amount)
+        external
+        onlyRole(SERVICE_ROLE)
+        idempotentBurn(_idempotencyKey)
+    {
         _burn(_account, _amount);
     }
 }

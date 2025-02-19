@@ -4,7 +4,6 @@ pragma solidity ^0.8.25;
 import {IDefaultErrors} from "./IDefaultErrors.sol";
 
 interface IRewardDistributor is IDefaultErrors {
-
     event RewardDistributed(
         bytes32 indexed idempotencyKey,
         uint256 totalShares,
@@ -22,5 +21,4 @@ interface IRewardDistributor is IDefaultErrors {
     function pause() external;
 
     function unpause() external;
-
 }

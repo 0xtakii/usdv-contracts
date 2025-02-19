@@ -2,7 +2,6 @@
 pragma solidity ^0.8.25;
 
 interface IFlpPriceStorage {
-
     struct Price {
         uint256 price;
         uint256 timestamp;

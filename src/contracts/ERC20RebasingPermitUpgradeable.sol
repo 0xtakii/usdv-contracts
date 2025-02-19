@@ -18,9 +18,15 @@ import {ERC20RebasingUpgradeable} from "./ERC20RebasingUpgradeable.sol";
  *
  * The contract uses the OpenZeppelin ERC20PermitUpgradeable implementation.
  */
-abstract contract ERC20RebasingPermitUpgradeable is Initializable, ERC20RebasingUpgradeable, IERC20Permit, EIP712Upgradeable, NoncesUpgradeable {
+abstract contract ERC20RebasingPermitUpgradeable is
+    Initializable,
+    ERC20RebasingUpgradeable,
+    IERC20Permit,
+    EIP712Upgradeable,
+    NoncesUpgradeable
+{
     bytes32 private constant PERMIT_TYPEHASH =
-    keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     /**
      * @dev Permit deadline has expired.
@@ -61,7 +67,8 @@ abstract contract ERC20RebasingPermitUpgradeable is Initializable, ERC20Rebasing
             revert ERC2612ExpiredSignature(_deadline);
         }
 
-        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, _owner, _spender, _value, _useNonce(_owner), _deadline));
+        bytes32 structHash =
+            keccak256(abi.encode(PERMIT_TYPEHASH, _owner, _spender, _value, _useNonce(_owner), _deadline));
 
         bytes32 hash = _hashTypedDataV4(structHash);
 
@@ -76,9 +83,13 @@ abstract contract ERC20RebasingPermitUpgradeable is Initializable, ERC20Rebasing
     /**
      * @inheritdoc IERC20Permit
      */
-    function nonces(
-        address _owner
-    ) public view virtual override(IERC20Permit, NoncesUpgradeable) returns (uint256 currentNonce) {
+    function nonces(address _owner)
+        public
+        view
+        virtual
+        override(IERC20Permit, NoncesUpgradeable)
+        returns (uint256 currentNonce)
+    {
         return super.nonces(_owner);
     }
 

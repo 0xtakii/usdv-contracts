@@ -6,13 +6,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IUsfRedemptionExtension} from "./IUsfRedemptionExtension.sol";
 
 interface IUsfExternalRequestsManager is IDefaultErrors {
-
     event MintRequestCreated(
-        uint256 indexed id,
-        address indexed provider,
-        address depositToken,
-        uint256 amount,
-        uint256 minMintAmount
+        uint256 indexed id, address indexed provider, address depositToken, uint256 amount, uint256 minMintAmount
     );
     event MintRequestCompleted(bytes32 indexed idempotencyKey, uint256 indexed id, uint256 mintedAmount);
     event MintRequestCancelled(uint256 indexed id);
@@ -56,7 +51,12 @@ interface IUsfExternalRequestsManager is IDefaultErrors {
     error InsufficientRedeemAmount(uint256 minExpectedAmount, uint256 withdrawalAmount);
 
     // solhint-disable-next-line ordering
-    enum State {CREATED, COMPLETED, CANCELLED}
+    enum State {
+        CREATED,
+        COMPLETED,
+        CANCELLED
+    }
+
     struct Request {
         uint256 id;
         address provider;
@@ -82,11 +82,7 @@ interface IUsfExternalRequestsManager is IDefaultErrors {
 
     function unpause() external;
 
-    function requestMint(
-        address _depositTokenAddress,
-        uint256 _amount,
-        uint256 _minMintAmount
-    ) external;
+    function requestMint(address _depositTokenAddress, uint256 _amount, uint256 _minMintAmount) external;
 
     // solhint-disable-next-line ordering
     function requestMintWithPermit(
@@ -103,11 +99,8 @@ interface IUsfExternalRequestsManager is IDefaultErrors {
 
     function completeMint(bytes32 _idempotencyKey, uint256 _id, uint256 _mintAmount) external;
 
-    function requestBurn(
-        uint256 _issueTokenAmount,
-        address _withdrawalTokenAddress,
-        uint256 _minWithdrawalAmount
-    ) external;
+    function requestBurn(uint256 _issueTokenAmount, address _withdrawalTokenAddress, uint256 _minWithdrawalAmount)
+        external;
 
     function requestBurnWithPermit(
         uint256 _issueTokenAmount,
@@ -125,12 +118,8 @@ interface IUsfExternalRequestsManager is IDefaultErrors {
 
     function emergencyWithdraw(IERC20 _token) external;
 
-    function redeem(
-        uint256 _amount,
-        address _receiver,
-        address _withdrawalTokenAddress,
-        uint256 _minExpectedAmount
-    ) external;
+    function redeem(uint256 _amount, address _receiver, address _withdrawalTokenAddress, uint256 _minExpectedAmount)
+        external;
 
     function redeem(uint256 _amount, address _withdrawalTokenAddress, uint256 _minExpectedAmount) external;
 
@@ -144,5 +133,4 @@ interface IUsfExternalRequestsManager is IDefaultErrors {
         bytes32 _r,
         bytes32 _s
     ) external;
-
 }
