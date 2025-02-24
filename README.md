@@ -1,3 +1,61 @@
+# USD FUN Contracts
+
+This repository contains the implementation for the USD FUN smart contracts
+
+## Contracts
+
+### SimpleToken.sol
+
+Core implementation contract for the funLP and USDFun tokens
+
+### ERC20RebasingUpgradeable.sol
+
+ERC20 implementation with rebasing logic
+
+### ERC20RebasingPermitUpgradeable.sol
+
+Inherits ERC20RebasingUpgradeable and adds permit
+
+### StUSF.sol
+
+Implements ERC20RebasingPermitUpgradeable with additional logic
+
+### WstUSF.sol
+
+Wrapped version of StUSF which allows users to keep their underlying balance fixed
+
+### RewardsDistributor.sol
+
+Interface for backend service to trigger minting of USDFun tokens as yield for holders
+
+### UsfPriceStorage.sol
+
+Price oracle for the USDFun token
+
+### FlpPriceStorage.sol
+
+Price oracle for the FunLP token
+
+### AddressesWhitelist.sol
+
+Whitelist contract used for ExternalRequestsManager and UsfExternalRequestsManager
+
+### ExternalRequestsManager.sol
+
+Interface for users to request to mint or burn FunLP tokens
+
+### UsfExternalRequestsManager.sol
+
+Interface for users to request to mint, burn, or redeem USDFun tokens
+
+### UsfRedemptionExtension.sol
+
+Has the logic to perform the conversion between USDFun and whitelisted treasury tokens
+
+### ChainlinkOracle.sol
+
+Chainlink feed registry integration to get token prices in USD
+
 ## Foundry
 
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**

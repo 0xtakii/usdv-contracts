@@ -5,6 +5,7 @@ import {Test, console2} from "forge-std/Test.sol";
 
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
@@ -46,13 +47,17 @@ contract MintableERC20 is ERC20 {
 }
 
 contract EndToEndTestFork is Test {
+    using SafeERC20 for IERC20;
+
     string ETHEREUM_RPC_URL = vm.envString("ETHEREUM_RPC");
     uint256 ethereumFork;
     uint256 blockNumber = 21877494;
 
     address usdcWhale = 0x37305B1cD40574E4C5Ce33f8e8306Be057fD7341;
+    address usdtWhale = 0x32b24247cbcE7c17b0017A2159a9FA481f401b16;
 
     address usdcAddress = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address usdtAddress = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
     address chainlinkFeedRegistry = 0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf;
 
     bytes32 SERVICE_ROLE = keccak256("SERVICE_ROLE");
@@ -79,6 +84,7 @@ contract EndToEndTestFork is Test {
     UsfExternalRequestsManager usfExternalRequestsManager;
 
     IERC20 usdcToken;
+    IERC20 usdtToken;
 
     function setUp() public {
         ethereumFork = vm.createFork(ETHEREUM_RPC_URL, blockNumber);
@@ -174,6 +180,7 @@ contract EndToEndTestFork is Test {
 
         // initializing mock tokens and transfering tokens
         usdcToken = IERC20(usdcAddress);
+        usdtToken = IERC20(usdtAddress);
 
         vm.prank(usdcWhale);
         usdcToken.transfer(userA, 1_000e6);
@@ -181,9 +188,16 @@ contract EndToEndTestFork is Test {
         vm.prank(usdcWhale);
         usdcToken.transfer(userB, 1_000e6);
 
+        vm.prank(usdtWhale);
+        usdtToken.safeTransfer(userA, 1_000e6);
+
+        vm.prank(usdtWhale);
+        usdtToken.safeTransfer(userB, 1_000e6);
+
         // deploying the requests manager contract
-        address[] memory whitelistedTokens = new address[](1);
-        whitelistedTokens[0] = address(usdcToken);
+        address[] memory whitelistedTokens = new address[](2);
+        whitelistedTokens[0] = usdcAddress;
+        whitelistedTokens[1] = usdtAddress;
 
         vm.prank(admin);
         externalRequestsManager =
@@ -199,11 +213,13 @@ contract EndToEndTestFork is Test {
         externalRequestsManager.grantRole(SERVICE_ROLE, service);
 
         // deploying the chainlink oracle feed contract
-        address[] memory tokenAddresses = new address[](1);
+        address[] memory tokenAddresses = new address[](2);
         tokenAddresses[0] = address(usdcToken);
+        tokenAddresses[1] = address(usdtToken);
 
-        uint48[] memory heartbeatIntervals = new uint48[](1);
+        uint48[] memory heartbeatIntervals = new uint48[](2);
         heartbeatIntervals[0] = 86400;
+        heartbeatIntervals[1] = 86400;
 
         vm.prank(admin);
         chainlinkOracle = new ChainlinkOracle(chainlinkFeedRegistry, tokenAddresses, heartbeatIntervals);
@@ -276,7 +292,24 @@ contract EndToEndTestFork is Test {
 
         (, int256 price,,,) = usfRedemptionExtension.getRedeemPrice(address(usdcToken));
 
+        int256 usdcOraclePrice = price;
+
         assertApproxEqAbs(price, 1e18, 1e16, "test_redemptionExtensionAndChainlinkOracle::6");
+
+        uint256 usdtPrice = chainlinkOracle.getPrice(address(usdtToken));
+
+        assertApproxEqAbs(usdtPrice, 1e8, 1e6, "test_redemptionExtensionAndChainlinkOracle::7");
+
+        assertEq(
+            chainlinkOracle.tokenHeartbeatIntervals(address(usdtToken)),
+            86400,
+            "test_redemptionExtensionAndChainlinkOracle::8"
+        );
+
+        (, price,,,) = usfRedemptionExtension.getRedeemPrice(address(usdtToken));
+        assertApproxEqAbs(price, 1e18, 1e16, "test_redemptionExtensionAndChainlinkOracle::9");
+
+        assertEq(usdcOraclePrice != price, true, "test_redemptionExtensionAndChainlinkOracle::10");
 
         vm.prank(admin);
         usfPriceStorage.setLowerBoundPercentage(1e18);
@@ -286,7 +319,7 @@ contract EndToEndTestFork is Test {
 
         (setPrice,,,) = usfPriceStorage.lastPrice();
 
-        assertEq(setPrice, 5e17, "test_redemptionExtensionAndChainlinkOracle::7");
+        assertEq(setPrice, 5e17, "test_redemptionExtensionAndChainlinkOracle::11");
 
         vm.expectRevert(abi.encodeWithSelector(IUsfRedemptionExtension.InvalidUsfPrice.selector, 5e17));
         (, price,,,) = usfRedemptionExtension.getRedeemPrice(address(usdcToken));
