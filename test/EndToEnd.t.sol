@@ -245,6 +245,11 @@ contract EndToEndTest is Test {
         usdtToken.approve(address(usfRedemptionExtension), type(uint256).max);
     }
 
+    function test_setUp() public {
+        assertEq(usfExternalRequestsManager.isWhitelistEnabled(), true, "test_setUp::1");
+        assertEq(externalRequestsManager.isWhitelistEnabled(), true, "test_setUp::2");
+    }
+
     function test_redemptionExtensionAndChainlinkOracle() public {
         bytes32 key = keccak256(abi.encode(1));
         uint256 usfSupply = 1_000e18;

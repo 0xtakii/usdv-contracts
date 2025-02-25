@@ -38,6 +38,11 @@ interface IFlpPriceStorageExtended is IFlpPriceStorage, IAccessControl {}
 
 interface IUsfPriceStorageExtended is IUsfPriceStorage, IAccessControl {}
 
+interface IUsdt {
+    function allowance(address _owner, address _spender) external returns (uint256);
+    function approve(address _spender, uint256 _value) external;
+}
+
 contract MintableERC20 is ERC20 {
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
 
@@ -263,6 +268,13 @@ contract EndToEndTestFork is Test {
 
         vm.prank(treasury);
         usdcToken.approve(address(usfRedemptionExtension), type(uint256).max);
+        vm.prank(treasury);
+        IUsdt(usdtAddress).approve(address(usfRedemptionExtension), type(uint256).max);
+    }
+
+    function test_setUp() public {
+        assertEq(usfExternalRequestsManager.isWhitelistEnabled(), true, "test_setUp::1");
+        assertEq(externalRequestsManager.isWhitelistEnabled(), true, "test_setUp::2");
     }
 
     function test_redemptionExtensionAndChainlinkOracle() public {
@@ -327,7 +339,7 @@ contract EndToEndTestFork is Test {
 
     function test_usfExternalRequestManagerRedeem() public {
         uint256 mintAmount = 200e18;
-        uint256 mintAmountUsdc = 200e6; // tokens paid in
+        uint256 mintAmountStable = 200e6; // tokens paid in
         bytes32 mintIdempotencyKeyA = keccak256(abi.encode(1));
         bytes32 mintIdempotencyKeyB = keccak256(abi.encode(2));
 
@@ -340,17 +352,19 @@ contract EndToEndTestFork is Test {
         usdcToken.approve(address(usfExternalRequestsManager), type(uint256).max);
         vm.prank(userB);
         funToken.approve(address(usfExternalRequestsManager), type(uint256).max);
+        vm.prank(userB);
+        IUsdt(usdtAddress).approve(address(usfExternalRequestsManager), type(uint256).max);
 
         vm.prank(admin);
         usfExternalRequestsManager.setWhitelistEnabled(false);
 
         vm.prank(userA);
-        usfExternalRequestsManager.requestMint(address(usdcToken), mintAmountUsdc, mintAmount);
+        usfExternalRequestsManager.requestMint(address(usdcToken), mintAmountStable, mintAmount);
         vm.prank(service);
         usfExternalRequestsManager.completeMint(mintIdempotencyKeyA, 0, mintAmount);
 
         vm.prank(userB);
-        usfExternalRequestsManager.requestMint(address(usdcToken), mintAmountUsdc, mintAmount);
+        usfExternalRequestsManager.requestMint(address(usdtToken), mintAmountStable, mintAmount);
         vm.prank(service);
         usfExternalRequestsManager.completeMint(mintIdempotencyKeyB, 1, mintAmount);
 
@@ -398,23 +412,23 @@ contract EndToEndTestFork is Test {
 
         vm.expectRevert(abi.encodeWithSelector(IUsfRedemptionExtension.RedemptionLimitExceeded.selector, 20e18, 100e18));
         vm.prank(userB);
-        usfExternalRequestsManager.redeem(20e18, address(usdcToken), 19e6);
+        usfExternalRequestsManager.redeem(20e18, address(usdtToken), 19e6);
 
         uint256 redeemAmountB = 10e18;
-        uint256 minExpectedAmountBUsdc = 9e6;
+        uint256 minExpectedAmountBUsdt = 9e6;
 
-        uint256 initialUsdcBalanceUserB = usdcToken.balanceOf(userB);
+        uint256 initialUsdtBalanceUserB = usdtToken.balanceOf(userB);
 
         setReservesKey = keccak256(abi.encode(2));
         vm.prank(service);
         usfPriceStorage.setReserves(setReservesKey, 1000e18, 1200e18);
 
         vm.prank(userB);
-        usfExternalRequestsManager.redeem(redeemAmountB, address(usdcToken), minExpectedAmountBUsdc);
+        usfExternalRequestsManager.redeem(redeemAmountB, address(usdtToken), minExpectedAmountBUsdt);
 
         // Assuming ~1:1 price
         assertApproxEqAbs(
-            usdcToken.balanceOf(userB), initialUsdcBalanceUserB + 10e6, 1e5, "test_usfExternalRequestManagerRedeem::11"
+            usdtToken.balanceOf(userB), initialUsdtBalanceUserB + 10e6, 1e5, "test_usfExternalRequestManagerRedeem::11"
         );
         assertEq(funToken.balanceOf(userB), mintAmount - redeemAmountB, "test_usfExternalRequestManagerRedeem::12");
     }
@@ -423,6 +437,9 @@ contract EndToEndTestFork is Test {
         vm.prank(userA);
         usdcToken.approve(address(usfExternalRequestsManager), type(uint256).max);
 
+        vm.prank(userB);
+        IUsdt(usdtAddress).approve(address(usfExternalRequestsManager), type(uint256).max);
+
         vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.UnknownProvider.selector, userA));
         vm.prank(userA);
         usfExternalRequestsManager.requestMint(address(usdcToken), 10e6, 10e18);
@@ -430,7 +447,10 @@ contract EndToEndTestFork is Test {
         vm.prank(admin);
         whitelist.addAccount(userA);
 
-        assertEq(usdcToken.balanceOf(address(usfExternalRequestsManager)), 0, "test_externalRequestManagerMint::1");
+        vm.prank(admin);
+        whitelist.addAccount(userB);
+
+        assertEq(usdcToken.balanceOf(address(usfExternalRequestsManager)), 0, "test_usfExternalRequestManagerMint::1");
 
         vm.expectRevert(abi.encodeWithSelector(IDefaultErrors.InvalidAmount.selector, 0));
         vm.prank(userA);
@@ -439,15 +459,17 @@ contract EndToEndTestFork is Test {
         vm.prank(userA);
         usfExternalRequestsManager.requestMint(address(usdcToken), 10e6, 10e18);
 
-        assertEq(usdcToken.balanceOf(address(usfExternalRequestsManager)), 10e6, "test_externalRequestManagerMint::2");
+        assertEq(
+            usdcToken.balanceOf(address(usfExternalRequestsManager)), 10e6, "test_usfExternalRequestManagerMint::2"
+        );
 
         (, address provider,, uint256 amount, address token, uint256 minExpectedAmount) =
             usfExternalRequestsManager.mintRequests(0);
 
-        assertEq(provider, userA, "test_externalRequestManagerMint::3");
-        assertEq(amount, 10e6, "test_externalRequestManagerMint::4");
-        assertEq(token, address(usdcToken), "test_externalRequestManagerMint::5");
-        assertEq(minExpectedAmount, 10e18, "test_externalRequestManagerMint::6");
+        assertEq(provider, userA, "test_usfExternalRequestManagerMint::3");
+        assertEq(amount, 10e6, "test_usfExternalRequestManagerMint::4");
+        assertEq(token, address(usdcToken), "test_usfExternalRequestManagerMint::5");
+        assertEq(minExpectedAmount, 10e18, "test_usfExternalRequestManagerMint::6");
 
         bytes32 idempotencyKey = keccak256(abi.encode(1));
 
@@ -461,14 +483,14 @@ contract EndToEndTestFork is Test {
         vm.prank(service);
         usfExternalRequestsManager.completeMint(idempotencyKey, 0, 9e18);
 
-        assertEq(funToken.balanceOf(userA), 0, "test_externalRequestManagerMint::7");
+        assertEq(funToken.balanceOf(userA), 0, "test_usfExternalRequestManagerMint::7");
 
         vm.prank(service);
         usfExternalRequestsManager.completeMint(idempotencyKey, 0, 10e18);
 
-        assertEq(funToken.balanceOf(userA), 10e18, "test_externalRequestManagerMint::8");
-        assertEq(usdcToken.balanceOf(address(usfExternalRequestsManager)), 0, "test_externalRequestManagerMint::9");
-        assertEq(usdcToken.balanceOf(address(admin)), 10e6, "test_externalRequestManagerMint::10");
+        assertEq(funToken.balanceOf(userA), 10e18, "test_usfExternalRequestManagerMint::8");
+        assertEq(usdcToken.balanceOf(address(usfExternalRequestsManager)), 0, "test_usfExternalRequestManagerMint::9");
+        assertEq(usdcToken.balanceOf(address(admin)), 10e6, "test_usfExternalRequestManagerMint::10");
 
         vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.MintRequestNotExist.selector, 1));
         vm.prank(userA);
@@ -483,7 +505,7 @@ contract EndToEndTestFork is Test {
         vm.prank(userA);
         usfExternalRequestsManager.requestMint(address(usdcToken), 10e6, 10e18);
 
-        assertEq(usdcToken.balanceOf(userA), userAStartUsdc - 10e6, "test_externalRequestManagerMint::11");
+        assertEq(usdcToken.balanceOf(userA), userAStartUsdc - 10e6, "test_usfExternalRequestManagerMint::11");
 
         vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.IllegalState.selector, 0, 1));
         vm.prank(userA);
@@ -492,38 +514,65 @@ contract EndToEndTestFork is Test {
         vm.prank(userA);
         usfExternalRequestsManager.cancelMint(1);
 
-        assertEq(usdcToken.balanceOf(userA), userAStartUsdc, "test_externalRequestManagerMint::12");
-        assertEq(usdcToken.balanceOf(address(usfExternalRequestsManager)), 0, "test_externalRequestManagerMint::13");
+        assertEq(usdcToken.balanceOf(userA), userAStartUsdc, "test_usfExternalRequestManagerMint::12");
+        assertEq(usdcToken.balanceOf(address(usfExternalRequestsManager)), 0, "test_usfExternalRequestManagerMint::13");
 
         vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.IllegalState.selector, 0, 2));
         vm.prank(userA);
         usfExternalRequestsManager.cancelMint(1);
+
+        vm.prank(userB);
+        usfExternalRequestsManager.requestMint(address(usdtToken), 10e6, 9e18);
+
+        assertEq(
+            usdtToken.balanceOf(address(usfExternalRequestsManager)), 10e6, "test_usfExternalRequestManagerMint::14"
+        );
+
+        idempotencyKey = keccak256(abi.encode(2));
+
+        vm.prank(service);
+        usfExternalRequestsManager.completeMint(idempotencyKey, 2, 95e17);
+
+        assertEq(usdtToken.balanceOf(address(usfExternalRequestsManager)), 0, "test_usfExternalRequestManagerMint::15");
+        assertEq(usdtToken.balanceOf(treasury), 10e6, "test_usfExternalRequestManagerMint::16");
+        assertEq(funToken.balanceOf(userB), 95e17, "test_usfExternalRequestManagerMint::17");
     }
 
     function test_usfExternalRequestManagerBurn() public {
-        vm.prank(admin);
+        vm.prank(treasury);
         usdcToken.approve(address(usfExternalRequestsManager), type(uint256).max);
+
+        vm.prank(treasury);
+        IUsdt(usdtAddress).approve(address(usfExternalRequestsManager), type(uint256).max);
 
         vm.prank(userA);
         usdcToken.approve(address(usfExternalRequestsManager), type(uint256).max);
 
+        vm.prank(userB);
+        IUsdt(usdtAddress).approve(address(usfExternalRequestsManager), type(uint256).max);
+
+        vm.prank(userA);
+        funToken.approve(address(usfExternalRequestsManager), type(uint256).max);
+
+        vm.prank(userB);
+        funToken.approve(address(usfExternalRequestsManager), type(uint256).max);
+
         vm.prank(admin);
         whitelist.addAccount(userA);
+
+        vm.prank(admin);
+        whitelist.addAccount(userB);
 
         vm.prank(userA);
         usfExternalRequestsManager.requestMint(address(usdcToken), 10e6, 10e18);
 
         bytes32 idempotencyKey = keccak256(abi.encode(1));
-        bytes32 nextIdempotencyKey = keccak256(abi.encode(2));
 
         vm.prank(service);
         usfExternalRequestsManager.completeMint(idempotencyKey, 0, 10e18);
 
-        assertEq(funToken.totalSupply(), 10e18, "test_externalRequestManagerBurn::1");
-        assertEq(funToken.balanceOf(userA), 10e18, "test_externalRequestManagerBurn::2");
-
-        vm.prank(userA);
-        funToken.approve(address(usfExternalRequestsManager), type(uint256).max);
+        assertEq(funToken.totalSupply(), 10e18, "test_usfExternalRequestManagerBurn::1");
+        assertEq(funToken.balanceOf(userA), 10e18, "test_usfExternalRequestManagerBurn::2");
 
         vm.expectRevert(abi.encodeWithSelector(IDefaultErrors.InvalidAmount.selector, 0));
         vm.prank(userA);
@@ -535,14 +584,14 @@ contract EndToEndTestFork is Test {
         (, address provider,, uint256 amount, address token, uint256 minExpectedAmount) =
             usfExternalRequestsManager.burnRequests(0);
 
-        assertEq(provider, userA, "test_externalRequestManagerBurn::3");
-        assertEq(amount, 9e18, "test_externalRequestManagerBurn::4");
-        assertEq(token, address(usdcToken), "test_externalRequestManagerBurn::5");
-        assertEq(minExpectedAmount, 8e6, "test_externalRequestManagerBurn::6");
+        assertEq(provider, userA, "test_usfExternalRequestManagerBurn::3");
+        assertEq(amount, 9e18, "test_usfExternalRequestManagerBurn::4");
+        assertEq(token, address(usdcToken), "test_usfExternalRequestManagerBurn::5");
+        assertEq(minExpectedAmount, 8e6, "test_usfExternalRequestManagerBurn::6");
 
-        assertEq(funToken.balanceOf(userA), 1e18, "test_externalRequestManagerBurn::7");
-        assertEq(funToken.balanceOf(address(usfExternalRequestsManager)), 9e18, "test_externalRequestManagerBurn::8");
-        assertEq(usdcToken.balanceOf(admin), 10e6, "test_externalRequestManagerBurn::9");
+        assertEq(funToken.balanceOf(userA), 1e18, "test_usfExternalRequestManagerBurn::7");
+        assertEq(funToken.balanceOf(address(usfExternalRequestsManager)), 9e18, "test_usfExternalRequestManagerBurn::8");
+        assertEq(usdcToken.balanceOf(admin), 10e6, "test_usfExternalRequestManagerBurn::9");
 
         vm.expectRevert(
             abi.encodeWithSelector(IUsfExternalRequestsManager.InsufficientWithdrawalAmount.selector, 7e6, 8e6)
@@ -557,12 +606,12 @@ contract EndToEndTestFork is Test {
         vm.prank(service);
         usfExternalRequestsManager.completeBurn(idempotencyKey, 0, 8e6);
 
-        assertEq(usdcToken.balanceOf(admin), 2e6, "test_externalRequestManagerBurn::10");
-        assertEq(funToken.totalSupply(), 1e18, "test_externalRequestManagerBurn::11");
+        assertEq(usdcToken.balanceOf(admin), 2e6, "test_usfExternalRequestManagerBurn::10");
+        assertEq(funToken.totalSupply(), 1e18, "test_usfExternalRequestManagerBurn::11");
 
         vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.IllegalState.selector, 0, 1));
         vm.prank(service);
-        usfExternalRequestsManager.completeBurn(idempotencyKey, 0, 8e18);
+        usfExternalRequestsManager.completeBurn(idempotencyKey, 0, 8e6);
 
         vm.prank(admin);
         usfExternalRequestsManager.pause();
@@ -577,25 +626,50 @@ contract EndToEndTestFork is Test {
         vm.prank(userA);
         usfExternalRequestsManager.requestBurn(1e18, address(usdcToken), 1e6);
 
-        assertEq(funToken.balanceOf(userA), 0, "test_externalRequestManagerBurn::12");
+        assertEq(funToken.balanceOf(userA), 0, "test_usfExternalRequestManagerBurn::12");
 
         vm.prank(userA);
         usfExternalRequestsManager.cancelBurn(1);
 
-        assertEq(funToken.balanceOf(userA), 1e18, "test_externalRequestManagerBurn::13");
+        assertEq(funToken.balanceOf(userA), 1e18, "test_usfExternalRequestManagerBurn::13");
 
         vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.IllegalState.selector, 0, 2));
         vm.prank(userA);
         usfExternalRequestsManager.cancelBurn(1);
+
+        idempotencyKey = keccak256(abi.encode(2));
 
         vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.IllegalState.selector, 0, 2));
         vm.prank(service);
-        usfExternalRequestsManager.completeBurn(nextIdempotencyKey, 1, 1e18);
+        usfExternalRequestsManager.completeBurn(idempotencyKey, 1, 1e6);
+
+        vm.prank(userB);
+        usfExternalRequestsManager.requestMint(address(usdtToken), 10e6, 10e18);
+
+        idempotencyKey = keccak256(abi.encode(3));
+
+        vm.prank(service);
+        usfExternalRequestsManager.completeMint(idempotencyKey, 1, 10e18);
+
+        uint256 userBStartingUsdt = usdtToken.balanceOf(userB);
+
+        vm.prank(userB);
+        usfExternalRequestsManager.requestBurn(2e18, address(usdtToken), 2e6);
+
+        idempotencyKey = keccak256(abi.encode(4));
+
+        vm.prank(service);
+        usfExternalRequestsManager.completeBurn(idempotencyKey, 2, 2e6);
+
+        assertEq(usdtToken.balanceOf(userB), userBStartingUsdt + 2e6, "test_usfExternalRequestManagerBurn::14");
     }
 
     function test_externalRequestManagerMint() public {
         vm.prank(userA);
         usdcToken.approve(address(externalRequestsManager), type(uint256).max);
+
+        vm.prank(userB);
+        IUsdt(usdtAddress).approve(address(externalRequestsManager), type(uint256).max);
 
         vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.UnknownProvider.selector, userA));
         vm.prank(userA);
@@ -603,6 +677,9 @@ contract EndToEndTestFork is Test {
 
         vm.prank(admin);
         whitelist.addAccount(userA);
+
+        vm.prank(admin);
+        whitelist.addAccount(userB);
 
         assertEq(usdcToken.balanceOf(address(externalRequestsManager)), 0, "test_externalRequestManagerMint::1");
 
@@ -670,32 +747,57 @@ contract EndToEndTestFork is Test {
         vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.IllegalState.selector, 0, 2));
         vm.prank(userA);
         externalRequestsManager.cancelMint(1);
+
+        vm.prank(userB);
+        externalRequestsManager.requestMint(address(usdtToken), 10e6, 9e18);
+
+        assertEq(usdtToken.balanceOf(address(externalRequestsManager)), 10e6, "test_externalRequestManagerMint::14");
+
+        idempotencyKey = keccak256(abi.encode(2));
+
+        vm.prank(service);
+        externalRequestsManager.completeMint(idempotencyKey, 2, 95e17);
+
+        assertEq(usdtToken.balanceOf(address(externalRequestsManager)), 0, "test_externalRequestManagerMint::15");
+        assertEq(usdtToken.balanceOf(treasury), 10e6, "test_externalRequestManagerMint::16");
+        assertEq(funLpToken.balanceOf(userB), 95e17, "test_externalRequestManagerMint::17");
     }
 
     function test_externalRequestManagerBurn() public {
-        vm.prank(admin);
+        vm.prank(treasury);
         usdcToken.approve(address(externalRequestsManager), type(uint256).max);
+
+        vm.prank(treasury);
+        IUsdt(usdtAddress).approve(address(externalRequestsManager), type(uint256).max);
 
         vm.prank(userA);
         usdcToken.approve(address(externalRequestsManager), type(uint256).max);
 
+        vm.prank(userB);
+        IUsdt(usdtAddress).approve(address(externalRequestsManager), type(uint256).max);
+
+        vm.prank(userA);
+        funLpToken.approve(address(externalRequestsManager), type(uint256).max);
+
+        vm.prank(userB);
+        funLpToken.approve(address(externalRequestsManager), type(uint256).max);
+
         vm.prank(admin);
         whitelist.addAccount(userA);
+
+        vm.prank(admin);
+        whitelist.addAccount(userB);
 
         vm.prank(userA);
         externalRequestsManager.requestMint(address(usdcToken), 10e6, 10e18);
 
         bytes32 idempotencyKey = keccak256(abi.encode(1));
-        bytes32 nextIdempotencyKey = keccak256(abi.encode(2));
 
         vm.prank(service);
         externalRequestsManager.completeMint(idempotencyKey, 0, 10e18);
 
         assertEq(funLpToken.totalSupply(), 10e18, "test_externalRequestManagerBurn::1");
         assertEq(funLpToken.balanceOf(userA), 10e18, "test_externalRequestManagerBurn::2");
-
-        vm.prank(userA);
-        funLpToken.approve(address(externalRequestsManager), type(uint256).max);
 
         vm.expectRevert(abi.encodeWithSelector(IDefaultErrors.InvalidAmount.selector, 0));
         vm.prank(userA);
@@ -734,7 +836,7 @@ contract EndToEndTestFork is Test {
 
         vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.IllegalState.selector, 0, 1));
         vm.prank(service);
-        externalRequestsManager.completeBurn(idempotencyKey, 0, 8e18);
+        externalRequestsManager.completeBurn(idempotencyKey, 0, 8e6);
 
         vm.prank(admin);
         externalRequestsManager.pause();
@@ -760,9 +862,31 @@ contract EndToEndTestFork is Test {
         vm.prank(userA);
         externalRequestsManager.cancelBurn(1);
 
+        idempotencyKey = keccak256(abi.encode(2));
+
         vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.IllegalState.selector, 0, 2));
         vm.prank(service);
-        externalRequestsManager.completeBurn(nextIdempotencyKey, 1, 1e18);
+        externalRequestsManager.completeBurn(idempotencyKey, 1, 1e6);
+
+        vm.prank(userB);
+        externalRequestsManager.requestMint(address(usdtToken), 10e6, 10e18);
+
+        idempotencyKey = keccak256(abi.encode(3));
+
+        vm.prank(service);
+        externalRequestsManager.completeMint(idempotencyKey, 1, 10e18);
+
+        uint256 userBStartingUsdt = usdtToken.balanceOf(userB);
+
+        vm.prank(userB);
+        externalRequestsManager.requestBurn(2e18, address(usdtToken), 2e6);
+
+        idempotencyKey = keccak256(abi.encode(4));
+
+        vm.prank(service);
+        externalRequestsManager.completeBurn(idempotencyKey, 2, 2e6);
+
+        assertEq(usdtToken.balanceOf(userB), userBStartingUsdt + 2e6, "test_externalRequestManagerBurn::14");
     }
 
     function test_usfPriceStorage() public {
