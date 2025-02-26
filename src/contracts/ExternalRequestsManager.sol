@@ -72,7 +72,7 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
         for (uint256 i = 0; i < _allowedTokenAddresses.length; i++) {
             address allowedTokenAddress = _allowedTokenAddresses[i];
             _assertNonZero(allowedTokenAddress);
-            if (allowedTokenAddress.code.length == 0) revert InvalidTokenAddress(allowedTokenAddress);
+            // if (allowedTokenAddress.code.length == 0) revert InvalidTokenAddress(allowedTokenAddress);
             allowedTokens[allowedTokenAddress] = true;
         }
 

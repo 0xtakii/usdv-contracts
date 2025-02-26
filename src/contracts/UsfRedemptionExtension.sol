@@ -96,7 +96,7 @@ contract UsfRedemptionExtension is IUsfRedemptionExtension, AccessControlDefault
         if (allowedWithdrawalTokens[_allowedWithdrawalTokenAddress]) {
             revert TokenAlreadyAllowed(_allowedWithdrawalTokenAddress);
         }
-        if (_allowedWithdrawalTokenAddress.code.length == 0) revert InvalidTokenAddress(_allowedWithdrawalTokenAddress);
+        // if (_allowedWithdrawalTokenAddress.code.length == 0) revert InvalidTokenAddress(_allowedWithdrawalTokenAddress);
         allowedWithdrawalTokens[_allowedWithdrawalTokenAddress] = true;
         emit AllowedWithdrawalTokenAdded(_allowedWithdrawalTokenAddress);
     }
