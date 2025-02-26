@@ -45,7 +45,7 @@ contract MintableERC20 is ERC20 {
     }
 }
 
-contract EndToEndTest is Test {
+contract EndToEndTestLocal is Test {
     bytes32 SERVICE_ROLE = keccak256("SERVICE_ROLE");
 
     address admin = makeAddr("admin"); // multisig

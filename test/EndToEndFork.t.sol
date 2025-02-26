@@ -24,7 +24,6 @@ import {
 } from "../src/contracts/UsfExternalRequestsManager.sol";
 import {UsfRedemptionExtension, IUsfRedemptionExtension} from "../src/contracts/UsfRedemptionExtension.sol";
 import {ChainlinkOracle, IChainlinkOracle} from "../src/contracts/oracles/ChainlinkOracle.sol";
-import {FeedRegistryMock} from "./mocks/FeedRegistryMock.sol";
 
 interface ISimpleTokenExtended is ISimpleToken, IERC20, IAccessControl {}
 
