@@ -42,19 +42,7 @@ Whitelist contract used for ExternalRequestsManager and UsfExternalRequestsManag
 
 ### ExternalRequestsManager.sol
 
-Interface for users to request to mint or burn FunLP tokens
-
-### UsfExternalRequestsManager.sol
-
-Interface for users to request to mint, burn, or redeem USDFun tokens
-
-### UsfRedemptionExtension.sol
-
-Has the logic to perform the conversion between USDFun and whitelisted treasury tokens
-
-### ChainlinkOracle.sol
-
-Chainlink feed registry integration to get token prices in USD
+Interface for users to request to mint or burn FunLP tokens / USDFun tokens
 
 ## Foundry
 
