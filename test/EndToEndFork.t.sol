@@ -19,11 +19,6 @@ import {FlpPriceStorage, IFlpPriceStorage} from "../src/contracts/FlpPriceStorag
 import {UsfPriceStorage, IUsfPriceStorage} from "../src/contracts/UsfPriceStorage.sol";
 import {AddressesWhitelist, IAddressesWhitelist} from "../src/contracts/AddressesWhitelist.sol";
 import {ExternalRequestsManager, IExternalRequestsManager} from "../src/contracts/ExternalRequestsManager.sol";
-import {
-    UsfExternalRequestsManager, IUsfExternalRequestsManager
-} from "../src/contracts/UsfExternalRequestsManager.sol";
-import {UsfRedemptionExtension, IUsfRedemptionExtension} from "../src/contracts/UsfRedemptionExtension.sol";
-import {ChainlinkOracle, IChainlinkOracle} from "../src/contracts/oracles/ChainlinkOracle.sol";
 
 interface ISimpleTokenExtended is ISimpleToken, IERC20, IAccessControl {}
 
@@ -83,9 +78,7 @@ contract EndToEndTestFork is Test {
     IUsfPriceStorageExtended usfPriceStorage;
     AddressesWhitelist whitelist;
     ExternalRequestsManager externalRequestsManager;
-    ChainlinkOracle chainlinkOracle;
-    UsfRedemptionExtension usfRedemptionExtension;
-    UsfExternalRequestsManager usfExternalRequestsManager;
+    ExternalRequestsManager usfExternalRequestsManager;
 
     IERC20 usdcToken;
     IERC20 usdtToken;
@@ -216,39 +209,10 @@ contract EndToEndTestFork is Test {
         vm.prank(admin);
         externalRequestsManager.grantRole(SERVICE_ROLE, service);
 
-        // deploying the chainlink oracle feed contract
-        address[] memory tokenAddresses = new address[](2);
-        tokenAddresses[0] = address(usdcToken);
-        tokenAddresses[1] = address(usdtToken);
-
-        uint48[] memory heartbeatIntervals = new uint48[](2);
-        heartbeatIntervals[0] = 86400;
-        heartbeatIntervals[1] = 86400;
-
-        vm.prank(admin);
-        chainlinkOracle = new ChainlinkOracle(chainlinkFeedRegistry, tokenAddresses, heartbeatIntervals);
-
-        // deploying the redemption extension contract
-        uint256 usfPriceStorageHeartbeatInterval = 60 * 60;
-        uint256 usfRedemptionLimit = 100e18; // redemption limit denominated in USF token
-
-        vm.prank(admin);
-        usfRedemptionExtension = new UsfRedemptionExtension(
-            address(funToken),
-            whitelistedTokens,
-            treasury,
-            address(chainlinkOracle),
-            address(usfPriceStorage),
-            usfPriceStorageHeartbeatInterval,
-            usfRedemptionLimit,
-            block.timestamp
-        );
-
         // deploying the USF requests manager contract
         vm.prank(admin);
-        usfExternalRequestsManager = new UsfExternalRequestsManager(
-            address(funToken), treasury, address(whitelist), address(usfRedemptionExtension), whitelistedTokens
-        );
+        usfExternalRequestsManager =
+            new ExternalRequestsManager(address(funToken), treasury, address(whitelist), whitelistedTokens);
 
         vm.prank(admin);
         usfExternalRequestsManager.setWhitelistEnabled(true);
@@ -257,179 +221,12 @@ contract EndToEndTestFork is Test {
         funToken.grantRole(SERVICE_ROLE, address(usfExternalRequestsManager));
 
         vm.prank(admin);
-        funToken.grantRole(SERVICE_ROLE, address(usfRedemptionExtension));
-
-        vm.prank(admin);
-        usfRedemptionExtension.grantRole(SERVICE_ROLE, address(usfExternalRequestsManager));
-
-        vm.prank(admin);
         usfExternalRequestsManager.grantRole(SERVICE_ROLE, address(service));
-
-        vm.prank(treasury);
-        usdcToken.approve(address(usfRedemptionExtension), type(uint256).max);
-        vm.prank(treasury);
-        IUsdt(usdtAddress).approve(address(usfRedemptionExtension), type(uint256).max);
     }
 
     function test_setUp() public {
         assertEq(usfExternalRequestsManager.isWhitelistEnabled(), true, "test_setUp::1");
         assertEq(externalRequestsManager.isWhitelistEnabled(), true, "test_setUp::2");
-    }
-
-    function test_redemptionExtensionAndChainlinkOracle() public {
-        bytes32 key = keccak256(abi.encode(1));
-        uint256 usfSupply = 1_000e18;
-        uint256 reserves = 1_100e18;
-
-        vm.prank(service);
-        usfPriceStorage.setReserves(key, usfSupply, reserves);
-
-        (uint256 setPrice,,,) = usfPriceStorage.lastPrice();
-
-        assertEq(setPrice, 1e18, "test_redemptionExtensionAndChainlinkOracle::1"); // capped price
-
-        uint256 usdcPrice = chainlinkOracle.getPrice(address(usdcToken));
-
-        assertApproxEqAbs(usdcPrice, 1e8, 1e6, "test_redemptionExtensionAndChainlinkOracle::2");
-        assertEq(chainlinkOracle.priceDecimals(address(usdcToken)), 8, "test_redemptionExtensionAndChainlinkOracle::3");
-        assertEq(
-            chainlinkOracle.tokenHeartbeatIntervals(address(usdcToken)),
-            86400,
-            "test_redemptionExtensionAndChainlinkOracle::4"
-        );
-
-        (, int256 setUsdcPrice2,,,) = chainlinkOracle.getLatestRoundData(address(usdcToken));
-        assertEq(usdcPrice, uint256(setUsdcPrice2), "test_redemptionExtensionAndChainlinkOracle::5");
-
-        (, int256 price,,,) = usfRedemptionExtension.getRedeemPrice(address(usdcToken));
-
-        int256 usdcOraclePrice = price;
-
-        assertApproxEqAbs(price, 1e18, 1e16, "test_redemptionExtensionAndChainlinkOracle::6");
-
-        uint256 usdtPrice = chainlinkOracle.getPrice(address(usdtToken));
-
-        assertApproxEqAbs(usdtPrice, 1e8, 1e6, "test_redemptionExtensionAndChainlinkOracle::7");
-
-        assertEq(
-            chainlinkOracle.tokenHeartbeatIntervals(address(usdtToken)),
-            86400,
-            "test_redemptionExtensionAndChainlinkOracle::8"
-        );
-
-        (, price,,,) = usfRedemptionExtension.getRedeemPrice(address(usdtToken));
-        assertApproxEqAbs(price, 1e18, 1e16, "test_redemptionExtensionAndChainlinkOracle::9");
-
-        assertEq(usdcOraclePrice != price, true, "test_redemptionExtensionAndChainlinkOracle::10");
-
-        vm.prank(admin);
-        usfPriceStorage.setLowerBoundPercentage(1e18);
-
-        vm.prank(service);
-        usfPriceStorage.setReserves(keccak256(abi.encode(2)), usfSupply, 500e18); // half
-
-        (setPrice,,,) = usfPriceStorage.lastPrice();
-
-        assertEq(setPrice, 5e17, "test_redemptionExtensionAndChainlinkOracle::11");
-
-        vm.expectRevert(abi.encodeWithSelector(IUsfRedemptionExtension.InvalidUsfPrice.selector, 5e17));
-        (, price,,,) = usfRedemptionExtension.getRedeemPrice(address(usdcToken));
-    }
-
-    function test_usfExternalRequestManagerRedeem() public {
-        uint256 mintAmount = 200e18;
-        uint256 mintAmountStable = 200e6; // tokens paid in
-        bytes32 mintIdempotencyKeyA = keccak256(abi.encode(1));
-        bytes32 mintIdempotencyKeyB = keccak256(abi.encode(2));
-
-        vm.prank(userA);
-        usdcToken.approve(address(usfExternalRequestsManager), type(uint256).max);
-        vm.prank(userA);
-        funToken.approve(address(usfExternalRequestsManager), type(uint256).max);
-
-        vm.prank(userB);
-        usdcToken.approve(address(usfExternalRequestsManager), type(uint256).max);
-        vm.prank(userB);
-        funToken.approve(address(usfExternalRequestsManager), type(uint256).max);
-        vm.prank(userB);
-        IUsdt(usdtAddress).approve(address(usfExternalRequestsManager), type(uint256).max);
-
-        vm.prank(admin);
-        usfExternalRequestsManager.setWhitelistEnabled(false);
-
-        vm.prank(userA);
-        usfExternalRequestsManager.requestMint(address(usdcToken), mintAmountStable, mintAmount);
-        vm.prank(service);
-        usfExternalRequestsManager.completeMint(mintIdempotencyKeyA, 0, mintAmount);
-
-        vm.prank(userB);
-        usfExternalRequestsManager.requestMint(address(usdtToken), mintAmountStable, mintAmount);
-        vm.prank(service);
-        usfExternalRequestsManager.completeMint(mintIdempotencyKeyB, 1, mintAmount);
-
-        assertEq(funToken.balanceOf(userA), mintAmount, "test_usfExternalRequestManagerRedeem::1");
-        assertEq(funToken.balanceOf(userB), mintAmount, "test_usfExternalRequestManagerRedeem::2");
-
-        bytes32 setReservesKey = keccak256(abi.encode(1));
-        vm.prank(service);
-        usfPriceStorage.setReserves(setReservesKey, 1000e18, 1100e18);
-
-        assertEq(usfRedemptionExtension.redemptionLimit(), 100e18, "test_usfExternalRequestManagerRedeem::3");
-
-        uint256 redeemAmountA = 90e18;
-        uint256 minExpectedAmountAUsdc = 89e6;
-
-        assertEq(
-            usfRedemptionExtension.allowedWithdrawalTokens(address(usdcToken)),
-            true,
-            "test_usfExternalRequestManagerRedeem::4"
-        );
-        assertEq(
-            usfRedemptionExtension.allowedWithdrawalTokens(address(1)), false, "test_usfExternalRequestManagerRedeem::5"
-        );
-
-        assertEq(usfRedemptionExtension.currentRedemptionUsage(), 0, "test_usfExternalRequestManagerRedeem::6");
-
-        uint256 initialUsdcBalanceTreasury = usdcToken.balanceOf(treasury);
-        uint256 initialUsdcBalanceUserA = usdcToken.balanceOf(userA);
-        vm.prank(userA);
-        usfExternalRequestsManager.redeem(redeemAmountA, address(usdcToken), minExpectedAmountAUsdc);
-
-        // Assuming ~1:1 price
-        assertApproxEqAbs(
-            usdcToken.balanceOf(userA), initialUsdcBalanceUserA + 90e6, 1e5, "test_usfExternalRequestManagerRedeem::7"
-        );
-        assertEq(funToken.balanceOf(userA), mintAmount - redeemAmountA, "test_usfExternalRequestManagerRedeem::8");
-        assertApproxEqAbs(
-            usdcToken.balanceOf(treasury),
-            initialUsdcBalanceTreasury - 90e6,
-            1e5,
-            "test_usfExternalRequestManagerRedeem::9"
-        );
-
-        assertEq(usfRedemptionExtension.currentRedemptionUsage(), 90e18, "test_usfExternalRequestManagerRedeem::10");
-
-        vm.expectRevert(abi.encodeWithSelector(IUsfRedemptionExtension.RedemptionLimitExceeded.selector, 20e18, 100e18));
-        vm.prank(userB);
-        usfExternalRequestsManager.redeem(20e18, address(usdtToken), 19e6);
-
-        uint256 redeemAmountB = 10e18;
-        uint256 minExpectedAmountBUsdt = 9e6;
-
-        uint256 initialUsdtBalanceUserB = usdtToken.balanceOf(userB);
-
-        setReservesKey = keccak256(abi.encode(2));
-        vm.prank(service);
-        usfPriceStorage.setReserves(setReservesKey, 1000e18, 1200e18);
-
-        vm.prank(userB);
-        usfExternalRequestsManager.redeem(redeemAmountB, address(usdtToken), minExpectedAmountBUsdt);
-
-        // Assuming ~1:1 price
-        assertApproxEqAbs(
-            usdtToken.balanceOf(userB), initialUsdtBalanceUserB + 10e6, 1e5, "test_usfExternalRequestManagerRedeem::11"
-        );
-        assertEq(funToken.balanceOf(userB), mintAmount - redeemAmountB, "test_usfExternalRequestManagerRedeem::12");
     }
 
     function test_usfExternalRequestManagerMint() public {
@@ -439,7 +236,7 @@ contract EndToEndTestFork is Test {
         vm.prank(userB);
         IUsdt(usdtAddress).approve(address(usfExternalRequestsManager), type(uint256).max);
 
-        vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.UnknownProvider.selector, userA));
+        vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.UnknownProvider.selector, userA));
         vm.prank(userA);
         usfExternalRequestsManager.requestMint(address(usdcToken), 10e6, 10e18);
 
@@ -472,13 +269,11 @@ contract EndToEndTestFork is Test {
 
         bytes32 idempotencyKey = keccak256(abi.encode(1));
 
-        vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.MintRequestNotExist.selector, 1));
+        vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.MintRequestNotExist.selector, 1));
         vm.prank(service);
         usfExternalRequestsManager.completeMint(idempotencyKey, 1, 9e18);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IUsfExternalRequestsManager.InsufficientMintAmount.selector, 9e18, 10e18)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.InsufficientMintAmount.selector, 9e18, 10e18));
         vm.prank(service);
         usfExternalRequestsManager.completeMint(idempotencyKey, 0, 9e18);
 
@@ -491,7 +286,7 @@ contract EndToEndTestFork is Test {
         assertEq(usdcToken.balanceOf(address(usfExternalRequestsManager)), 0, "test_usfExternalRequestManagerMint::9");
         assertEq(usdcToken.balanceOf(address(admin)), 10e6, "test_usfExternalRequestManagerMint::10");
 
-        vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.MintRequestNotExist.selector, 1));
+        vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.MintRequestNotExist.selector, 1));
         vm.prank(userA);
         usfExternalRequestsManager.cancelMint(1);
 
@@ -506,7 +301,7 @@ contract EndToEndTestFork is Test {
 
         assertEq(usdcToken.balanceOf(userA), userAStartUsdc - 10e6, "test_usfExternalRequestManagerMint::11");
 
-        vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.IllegalState.selector, 0, 1));
+        vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.IllegalState.selector, 0, 1));
         vm.prank(userA);
         usfExternalRequestsManager.cancelMint(0);
 
@@ -516,7 +311,7 @@ contract EndToEndTestFork is Test {
         assertEq(usdcToken.balanceOf(userA), userAStartUsdc, "test_usfExternalRequestManagerMint::12");
         assertEq(usdcToken.balanceOf(address(usfExternalRequestsManager)), 0, "test_usfExternalRequestManagerMint::13");
 
-        vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.IllegalState.selector, 0, 2));
+        vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.IllegalState.selector, 0, 2));
         vm.prank(userA);
         usfExternalRequestsManager.cancelMint(1);
 
@@ -593,7 +388,7 @@ contract EndToEndTestFork is Test {
         assertEq(usdcToken.balanceOf(admin), 10e6, "test_usfExternalRequestManagerBurn::9");
 
         vm.expectRevert(
-            abi.encodeWithSelector(IUsfExternalRequestsManager.InsufficientWithdrawalAmount.selector, 7e6, 8e6)
+            abi.encodeWithSelector(IExternalRequestsManager.InsufficientWithdrawalAmount.selector, 7e6, 8e6)
         );
         vm.prank(service);
         usfExternalRequestsManager.completeBurn(idempotencyKey, 0, 7e6);
@@ -608,7 +403,7 @@ contract EndToEndTestFork is Test {
         assertEq(usdcToken.balanceOf(admin), 2e6, "test_usfExternalRequestManagerBurn::10");
         assertEq(funToken.totalSupply(), 1e18, "test_usfExternalRequestManagerBurn::11");
 
-        vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.IllegalState.selector, 0, 1));
+        vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.IllegalState.selector, 0, 1));
         vm.prank(service);
         usfExternalRequestsManager.completeBurn(idempotencyKey, 0, 8e6);
 
@@ -632,13 +427,13 @@ contract EndToEndTestFork is Test {
 
         assertEq(funToken.balanceOf(userA), 1e18, "test_usfExternalRequestManagerBurn::13");
 
-        vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.IllegalState.selector, 0, 2));
+        vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.IllegalState.selector, 0, 2));
         vm.prank(userA);
         usfExternalRequestsManager.cancelBurn(1);
 
         idempotencyKey = keccak256(abi.encode(2));
 
-        vm.expectRevert(abi.encodeWithSelector(IUsfExternalRequestsManager.IllegalState.selector, 0, 2));
+        vm.expectRevert(abi.encodeWithSelector(IExternalRequestsManager.IllegalState.selector, 0, 2));
         vm.prank(service);
         usfExternalRequestsManager.completeBurn(idempotencyKey, 1, 1e6);
 

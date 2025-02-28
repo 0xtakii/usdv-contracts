@@ -21,11 +21,6 @@ import {FlpPriceStorage, IFlpPriceStorage} from "../src/contracts/FlpPriceStorag
 import {UsfPriceStorage, IUsfPriceStorage} from "../src/contracts/UsfPriceStorage.sol";
 import {AddressesWhitelist, IAddressesWhitelist} from "../src/contracts/AddressesWhitelist.sol";
 import {ExternalRequestsManager, IExternalRequestsManager} from "../src/contracts/ExternalRequestsManager.sol";
-import {
-    UsfExternalRequestsManager, IUsfExternalRequestsManager
-} from "../src/contracts/UsfExternalRequestsManager.sol";
-import {UsfRedemptionExtension, IUsfRedemptionExtension} from "../src/contracts/UsfRedemptionExtension.sol";
-import {ChainlinkOracle, IChainlinkOracle} from "../src/contracts/oracles/ChainlinkOracle.sol";
 
 interface ISimpleTokenExtended is ISimpleToken, IERC20, IAccessControlDefaultAdminRules {}
 
@@ -39,15 +34,6 @@ interface IFlpPriceStorageExtended is IFlpPriceStorage, IAccessControlDefaultAdm
 
 interface IUsfPriceStorageExtended is IUsfPriceStorage, IAccessControlDefaultAdminRules {}
 
-interface IUsfRedemptionExtensionExtended is IUsfRedemptionExtension, IAccessControlDefaultAdminRules {
-    function paused() external view returns (bool);
-}
-
-interface IUsfExternalRequestsManagerExtended is IUsfExternalRequestsManager, IAccessControlDefaultAdminRules {
-    function isWhitelistEnabled() external view returns (bool);
-    function ISSUE_TOKEN_ADDRESS() external view returns (address);
-}
-
 interface IExternalRequestsManagerExtended is IExternalRequestsManager, IAccessControlDefaultAdminRules {
     function isWhitelistEnabled() external view returns (bool);
     function ISSUE_TOKEN_ADDRESS() external view returns (address);
@@ -59,8 +45,6 @@ interface ITwoStepOwnable {
     function owner() external view returns (address);
     function pendingOwner() external view returns (address);
 }
-
-interface IChainlinkOracleExtended is IChainlinkOracle, ITwoStepOwnable {}
 
 interface IAddressesWhitelistExtended is IAddressesWhitelist, ITwoStepOwnable {}
 
@@ -79,9 +63,7 @@ contract DeployScript is Script {
     IUsfPriceStorageExtended public usfPriceStorage;
     IAddressesWhitelistExtended public whitelist;
     IExternalRequestsManagerExtended public externalRequestsManager;
-    IChainlinkOracleExtended public chainlinkOracle;
-    IUsfRedemptionExtensionExtended public usfRedemptionExtension;
-    IUsfExternalRequestsManagerExtended public usfExternalRequestsManager;
+    IExternalRequestsManagerExtended public usfExternalRequestsManager;
 
     bytes32 SERVICE_ROLE = keccak256("SERVICE_ROLE");
     uint256 privateKey = vm.envUint("PRIVATE_KEY");
@@ -97,7 +79,6 @@ contract DeployScript is Script {
     address public treasury; // fund management address
     address public usdcAddress;
     address public usdtAddress;
-    address public chainlinkFeedRegistry; // only exists on eth mainnet
     address public feeCollector; // fee collection will not occur on smart contract level
 
     function run(string memory _configName) public {
@@ -111,7 +92,6 @@ contract DeployScript is Script {
         treasury = stdJson.readAddress(json, "$.addresses.treasury");
         usdcAddress = stdJson.readAddress(json, "$.addresses.usdcAddress");
         usdtAddress = stdJson.readAddress(json, "$.addresses.usdtAddress");
-        chainlinkFeedRegistry = stdJson.readAddress(json, "$.addresses.chainlinkFeedRegistry");
 
         // caller is the deployer address
         vm.startBroadcast(privateKey);
@@ -208,47 +188,13 @@ contract DeployScript is Script {
 
         externalRequestsManager.grantRole(SERVICE_ROLE, service);
 
-        uint48[] memory heartbeatIntervals = new uint48[](2);
-        heartbeatIntervals[0] = 86400;
-        heartbeatIntervals[1] = 86400;
-
-        chainlinkOracle = IChainlinkOracleExtended(
-            address(new ChainlinkOracle(chainlinkFeedRegistry, whitelistedTokens, heartbeatIntervals))
-        );
-
-        usfRedemptionExtension = IUsfRedemptionExtensionExtended(
-            address(
-                new UsfRedemptionExtension(
-                    address(funToken),
-                    whitelistedTokens,
-                    treasury,
-                    address(chainlinkOracle),
-                    address(usfPriceStorage),
-                    60 * 60, // USDFun heartbeat interval
-                    1e18, // USDFun redemption limit
-                    block.timestamp
-                )
-            )
-        );
-
-        usfExternalRequestsManager = IUsfExternalRequestsManagerExtended(
-            address(
-                new UsfExternalRequestsManager(
-                    address(funToken), treasury, address(whitelist), address(usfRedemptionExtension), whitelistedTokens
-                )
-            )
+        usfExternalRequestsManager = IExternalRequestsManagerExtended(
+            address(new ExternalRequestsManager(address(funToken), treasury, address(whitelist), whitelistedTokens))
         );
 
         funToken.grantRole(SERVICE_ROLE, address(usfExternalRequestsManager)); // requires for mint and burn functions
-        funToken.grantRole(SERVICE_ROLE, address(usfRedemptionExtension)); // requires for redeem() function
-
-        usfRedemptionExtension.grantRole(SERVICE_ROLE, address(usfExternalRequestsManager));
 
         usfExternalRequestsManager.grantRole(SERVICE_ROLE, address(service));
-
-        usfRedemptionExtension.pause(); // disable automatic redemptions
-
-        // the treasury is required to make token approvals to enable to system to function properly
 
         // transfer the ownership to the multisig for all contracts
         funToken.beginDefaultAdminTransfer(admin);
@@ -256,12 +202,10 @@ contract DeployScript is Script {
         rewardDistributor.beginDefaultAdminTransfer(admin);
         flpPriceStorage.beginDefaultAdminTransfer(admin);
         usfPriceStorage.beginDefaultAdminTransfer(admin);
-        usfRedemptionExtension.beginDefaultAdminTransfer(admin);
         usfExternalRequestsManager.beginDefaultAdminTransfer(admin);
         externalRequestsManager.beginDefaultAdminTransfer(admin);
 
         whitelist.transferOwnership(admin);
-        chainlinkOracle.transferOwnership(admin);
 
         vm.stopBroadcast();
     }

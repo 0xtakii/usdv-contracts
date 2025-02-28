@@ -22,9 +22,7 @@ contract DeployScriptTest is Test {
     IUsfPriceStorageExtended usfPriceStorage;
     IAddressesWhitelistExtended whitelist;
     IExternalRequestsManagerExtended externalRequestsManager;
-    IChainlinkOracleExtended chainlinkOracle;
-    IUsfRedemptionExtensionExtended usfRedemptionExtension;
-    IUsfExternalRequestsManagerExtended usfExternalRequestsManager;
+    IExternalRequestsManagerExtended usfExternalRequestsManager;
 
     address admin;
 
@@ -43,10 +41,8 @@ contract DeployScriptTest is Test {
         flpPriceStorage = deployScript.flpPriceStorage();
         usfPriceStorage = deployScript.usfPriceStorage();
         externalRequestsManager = deployScript.externalRequestsManager();
-        usfRedemptionExtension = deployScript.usfRedemptionExtension();
         usfExternalRequestsManager = deployScript.usfExternalRequestsManager();
         whitelist = deployScript.whitelist();
-        chainlinkOracle = deployScript.chainlinkOracle();
 
         admin = deployScript.admin();
     }
@@ -54,24 +50,22 @@ contract DeployScriptTest is Test {
     function test_deployment() public {
         assertEq(usfExternalRequestsManager.isWhitelistEnabled(), false, "test_deployment::1");
         assertEq(externalRequestsManager.isWhitelistEnabled(), false, "test_deployment::2");
-        assertEq(usfRedemptionExtension.paused(), true, "test_deployment::3");
 
-        assertEq(gatherTransparentProxyAdminAddress(address(funToken)), admin, "test_deployment::4");
-        assertEq(gatherTransparentProxyAdminAddress(address(funLpToken)), admin, "test_deployment::5");
-        assertEq(gatherTransparentProxyAdminAddress(address(stFunToken)), admin, "test_deployment::6");
-        assertEq(gatherTransparentProxyAdminAddress(address(wstFunToken)), admin, "test_deployment::7");
-        assertEq(gatherTransparentProxyAdminAddress(address(flpPriceStorage)), admin, "test_deployment::8");
-        assertEq(gatherTransparentProxyAdminAddress(address(usfPriceStorage)), admin, "test_deployment::9");
+        assertEq(gatherTransparentProxyAdminAddress(address(funToken)), admin, "test_deployment::3");
+        assertEq(gatherTransparentProxyAdminAddress(address(funLpToken)), admin, "test_deployment::4");
+        assertEq(gatherTransparentProxyAdminAddress(address(stFunToken)), admin, "test_deployment::5");
+        assertEq(gatherTransparentProxyAdminAddress(address(wstFunToken)), admin, "test_deployment::6");
+        assertEq(gatherTransparentProxyAdminAddress(address(flpPriceStorage)), admin, "test_deployment::7");
+        assertEq(gatherTransparentProxyAdminAddress(address(usfPriceStorage)), admin, "test_deployment::8");
 
-        assertEq(usfExternalRequestsManager.ISSUE_TOKEN_ADDRESS(), address(funToken), "test_deployment::10");
-        assertEq(externalRequestsManager.ISSUE_TOKEN_ADDRESS(), address(funLpToken), "test_deployment::11");
+        assertEq(usfExternalRequestsManager.ISSUE_TOKEN_ADDRESS(), address(funToken), "test_deployment::9");
+        assertEq(externalRequestsManager.ISSUE_TOKEN_ADDRESS(), address(funLpToken), "test_deployment::10");
 
         vm.warp(block.timestamp + 86400 + 1);
 
         vm.startPrank(admin);
 
         whitelist.acceptOwnership();
-        chainlinkOracle.acceptOwnership();
 
         funToken.acceptDefaultAdminTransfer();
         funLpToken.acceptDefaultAdminTransfer();
@@ -79,21 +73,18 @@ contract DeployScriptTest is Test {
         flpPriceStorage.acceptDefaultAdminTransfer();
         usfPriceStorage.acceptDefaultAdminTransfer();
         externalRequestsManager.acceptDefaultAdminTransfer();
-        usfRedemptionExtension.acceptDefaultAdminTransfer();
         usfExternalRequestsManager.acceptDefaultAdminTransfer();
 
         vm.stopPrank();
 
-        assertEq(whitelist.owner(), admin, "test_deployment::12");
-        assertEq(chainlinkOracle.owner(), admin, "test_deployment::13");
-        assertEq(funToken.defaultAdmin(), admin, "test_deployment::14");
-        assertEq(funLpToken.defaultAdmin(), admin, "test_deployment::15");
-        assertEq(rewardDistributor.defaultAdmin(), admin, "test_deployment::16");
-        assertEq(flpPriceStorage.defaultAdmin(), admin, "test_deployment::17");
-        assertEq(usfPriceStorage.defaultAdmin(), admin, "test_deployment::18");
-        assertEq(externalRequestsManager.defaultAdmin(), admin, "test_deployment::19");
-        assertEq(usfRedemptionExtension.defaultAdmin(), admin, "test_deployment::20");
-        assertEq(usfExternalRequestsManager.defaultAdmin(), admin, "test_deployment::21");
+        assertEq(whitelist.owner(), admin, "test_deployment::11");
+        assertEq(funToken.defaultAdmin(), admin, "test_deployment::12");
+        assertEq(funLpToken.defaultAdmin(), admin, "test_deployment::13");
+        assertEq(rewardDistributor.defaultAdmin(), admin, "test_deployment::14");
+        assertEq(flpPriceStorage.defaultAdmin(), admin, "test_deployment::15");
+        assertEq(usfPriceStorage.defaultAdmin(), admin, "test_deployment::16");
+        assertEq(externalRequestsManager.defaultAdmin(), admin, "test_deployment::17");
+        assertEq(usfExternalRequestsManager.defaultAdmin(), admin, "test_deployment::18");
     }
 
     function gatherTransparentProxyAdminAddress(address proxy) public view returns (address adminAddress) {
