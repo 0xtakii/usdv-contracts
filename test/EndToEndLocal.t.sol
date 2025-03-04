@@ -44,7 +44,6 @@ contract EndToEndTestLocal is Test {
 
     address admin = makeAddr("admin"); // multisig
     address service = makeAddr("service"); // backend
-    address feeCollector = makeAddr("feeCollector"); // fee collector
     address userA = makeAddr("userA");
     address userB = makeAddr("userB");
     address treasury = admin;
@@ -103,7 +102,7 @@ contract EndToEndTestLocal is Test {
         // deploy the rewards distributor contract and set up the service account flow
         vm.prank(admin);
         rewardDistributor = IRewardDistributorExtended(
-            address(new RewardDistributor(address(stFunToken), feeCollector, address(funToken)))
+            address(new RewardDistributor(address(stFunToken), address(funToken)))
         );
 
         vm.startPrank(admin);
@@ -686,7 +685,7 @@ contract EndToEndTestLocal is Test {
         bytes32 idempotencyKey = keccak256(abi.encode(1));
 
         vm.prank(service);
-        rewardDistributor.distribute(idempotencyKey, 1e18, 0); // mints 1e18 USF as reward
+        rewardDistributor.distribute(idempotencyKey, 1e18); // mints 1e18 USF as reward
 
         assertEq(stFunToken.balanceOf(userA), 2e18 - 1, "test_rebasingTokens::4"); // round down
         assertEq(funToken.balanceOf(address(stFunToken)), 2e18, "test_rebasingTokens::5");
@@ -723,32 +722,31 @@ contract EndToEndTestLocal is Test {
 
         vm.expectRevert();
         vm.prank(admin);
-        rewardDistributor.distribute(idempotencyKey, 1e18, 1e18); // mints 1e18 USF as reward
+        rewardDistributor.distribute(idempotencyKey, 1e18);
 
         vm.expectRevert(abi.encodeWithSelector(IDefaultErrors.IdempotencyKeyAlreadyExist.selector, idempotencyKey));
         vm.prank(service);
-        rewardDistributor.distribute(idempotencyKey, 1e18, 1e18); // mints 1e18 USF as reward
+        rewardDistributor.distribute(idempotencyKey, 1e18);
 
         idempotencyKey = keccak256(abi.encode(2));
         vm.prank(service);
-        rewardDistributor.distribute(idempotencyKey, 1e18, 1e18);
+        rewardDistributor.distribute(idempotencyKey, 1e18);
 
-        assertEq(funToken.balanceOf(feeCollector), 1e18, "test_rebasingTokens::13");
-        assertApproxEqAbs(funToken.balanceOf(address(stFunToken)), 2e18, 1, "test_rebasingTokens::14");
-        assertEq(stFunToken.totalSupply(), funToken.balanceOf(address(stFunToken)), "test_rebasingTokens::15");
+        assertApproxEqAbs(funToken.balanceOf(address(stFunToken)), 2e18, 1, "test_rebasingTokens::13");
+        assertEq(stFunToken.totalSupply(), funToken.balanceOf(address(stFunToken)), "test_rebasingTokens::14");
 
-        assertEq(wstFunToken.balanceOf(userA), userAStartShares / 1000, "test_rebasingTokens::16");
+        assertEq(wstFunToken.balanceOf(userA), userAStartShares / 1000, "test_rebasingTokens::15");
 
         uint256 maxAmount = wstFunToken.maxRedeem(userA);
 
         vm.prank(userA);
         wstFunToken.redeem(maxAmount);
 
-        assertEq(stFunToken.balanceOf(address(wstFunToken)), 0, "test_rebasingTokens::17");
+        assertEq(stFunToken.balanceOf(address(wstFunToken)), 0, "test_rebasingTokens::16");
 
         vm.prank(userA);
         stFunToken.withdrawAll();
 
-        assertEq(stFunToken.balanceOf(userA), 0, "test_rebasingTokens::18");
+        assertEq(stFunToken.balanceOf(userA), 0, "test_rebasingTokens::17");
     }
 }

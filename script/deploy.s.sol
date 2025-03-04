@@ -79,7 +79,6 @@ contract DeployScript is Script {
     address public treasury; // fund management address
     address public usdcAddress;
     address public usdtAddress;
-    address public feeCollector; // fee collection will not occur on smart contract level
 
     function run(string memory _configName) public {
         configName = _configName;
@@ -88,7 +87,6 @@ contract DeployScript is Script {
 
         service = stdJson.readAddress(json, "$.addresses.service");
         admin = stdJson.readAddress(json, "$.addresses.admin");
-        feeCollector = admin;
         treasury = stdJson.readAddress(json, "$.addresses.treasury");
         usdcAddress = stdJson.readAddress(json, "$.addresses.usdcAddress");
         usdtAddress = stdJson.readAddress(json, "$.addresses.usdtAddress");
@@ -131,7 +129,7 @@ contract DeployScript is Script {
 
         // deploy the RewardsDistributor contract
         rewardDistributor = IRewardDistributorExtended(
-            address(new RewardDistributor(address(stFunToken), feeCollector, address(funToken)))
+            address(new RewardDistributor(address(stFunToken), address(funToken)))
         );
 
         rewardDistributor.grantRole(SERVICE_ROLE, service); // service account requires ability trigger rewards distribution

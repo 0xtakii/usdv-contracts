@@ -13,7 +13,6 @@ contract RewardDistributor is IRewardDistributor, AccessControlDefaultAdminRules
 
     address public immutable ST_USF_ADDRESS;
     address public immutable TOKEN_ADDRESS;
-    address public feeCollectorAddress;
 
     mapping(bytes32 => bool) private distributeIds;
 
@@ -25,15 +24,14 @@ contract RewardDistributor is IRewardDistributor, AccessControlDefaultAdminRules
         distributeIds[idempotencyKey] = true;
     }
 
-    constructor(address _stUSFAddress, address _feeCollectorAddress, address _tokenAddress)
+    constructor(address _stUSFAddress, address _tokenAddress)
         AccessControlDefaultAdminRules(1 days, msg.sender)
     {
         ST_USF_ADDRESS = _assertNonZero(_stUSFAddress);
-        feeCollectorAddress = _assertNonZero(_feeCollectorAddress);
         TOKEN_ADDRESS = _assertNonZero(_tokenAddress);
     }
 
-    function distribute(bytes32 _idempotencyKey, uint256 _stakingReward, uint256 _feeReward)
+    function distribute(bytes32 _idempotencyKey, uint256 _stakingReward)
         external
         onlyRole(SERVICE_ROLE)
         idempotent(_idempotencyKey)
@@ -50,14 +48,7 @@ contract RewardDistributor is IRewardDistributor, AccessControlDefaultAdminRules
 
         uint256 totalUSFAfter = totalUSFBefore + _stakingReward;
 
-        token.mint(feeCollectorAddress, _feeReward);
-
-        emit RewardDistributed(_idempotencyKey, totalShares, totalUSFBefore, totalUSFAfter, _stakingReward, _feeReward);
-    }
-
-    function setFeeCollector(address _feeCollectorAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        feeCollectorAddress = _assertNonZero(_feeCollectorAddress);
-        emit FeeCollectorSet(_feeCollectorAddress);
+        emit RewardDistributed(_idempotencyKey, totalShares, totalUSFBefore, totalUSFAfter, _stakingReward);
     }
 
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {

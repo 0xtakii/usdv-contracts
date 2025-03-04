@@ -9,14 +9,10 @@ interface IRewardDistributor is IDefaultErrors {
         uint256 totalShares,
         uint256 totalUSFBefore,
         uint256 totalUSFAfter,
-        uint256 stakingReward,
-        uint256 feeReward
+        uint256 stakingReward
     );
-    event FeeCollectorSet(address feeCollector);
 
-    function distribute(bytes32 idempotencyKey, uint256 _stakingReward, uint256 _feeReward) external;
-
-    function setFeeCollector(address _feeCollectorAddress) external;
+    function distribute(bytes32 idempotencyKey, uint256 _stakingReward) external;
 
     function pause() external;
 
