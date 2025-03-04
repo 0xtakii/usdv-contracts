@@ -101,9 +101,8 @@ contract EndToEndTestLocal is Test {
 
         // deploy the rewards distributor contract and set up the service account flow
         vm.prank(admin);
-        rewardDistributor = IRewardDistributorExtended(
-            address(new RewardDistributor(address(stFunToken), address(funToken)))
-        );
+        rewardDistributor =
+            IRewardDistributorExtended(address(new RewardDistributor(address(stFunToken), address(funToken))));
 
         vm.startPrank(admin);
         rewardDistributor.grantRole(SERVICE_ROLE, service);

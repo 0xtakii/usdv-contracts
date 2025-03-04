@@ -128,9 +128,8 @@ contract DeployScript is Script {
         );
 
         // deploy the RewardsDistributor contract
-        rewardDistributor = IRewardDistributorExtended(
-            address(new RewardDistributor(address(stFunToken), address(funToken)))
-        );
+        rewardDistributor =
+            IRewardDistributorExtended(address(new RewardDistributor(address(stFunToken), address(funToken))));
 
         rewardDistributor.grantRole(SERVICE_ROLE, service); // service account requires ability trigger rewards distribution
         funToken.grantRole(SERVICE_ROLE, address(rewardDistributor)); // reward distributor needs ability to mint USDFun tokens

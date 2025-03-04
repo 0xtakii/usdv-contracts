@@ -24,9 +24,7 @@ contract RewardDistributor is IRewardDistributor, AccessControlDefaultAdminRules
         distributeIds[idempotencyKey] = true;
     }
 
-    constructor(address _stUSFAddress, address _tokenAddress)
-        AccessControlDefaultAdminRules(1 days, msg.sender)
-    {
+    constructor(address _stUSFAddress, address _tokenAddress) AccessControlDefaultAdminRules(1 days, msg.sender) {
         ST_USF_ADDRESS = _assertNonZero(_stUSFAddress);
         TOKEN_ADDRESS = _assertNonZero(_tokenAddress);
     }
