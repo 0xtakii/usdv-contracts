@@ -93,6 +93,11 @@ abstract contract ERC20RebasingPermitUpgradeable is
         return super.nonces(_owner);
     }
 
+    function useNonce() external returns (uint256) {
+        address caller = _msgSender();
+        return _useNonce(caller);
+    }
+
     /**
      * @inheritdoc IERC20Permit
      */

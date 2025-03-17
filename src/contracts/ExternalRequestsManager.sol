@@ -249,11 +249,29 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
         emit BurnRequestCompleted(_id, request.amount, _withdrawalAmount);
     }
 
+    /* 
+     * @dev Will never be called except in extreme emergency case.
+     */
     function emergencyWithdraw(IERC20 _token) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 balance = _token.balanceOf(address(this));
         _token.safeTransfer(msg.sender, balance);
 
         emit EmergencyWithdrawn(address(_token), balance);
+    }
+
+    /* 
+     * @dev Will never be called except in extreme emergency case. User funds will never be trapped.
+     */
+    function emergencyCancelMintRequest(uint256 _id) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        Request storage request = mintRequests[_id];
+        _assertState(State.CREATED, request.state);
+
+        uint256 requestAmount = request.amount; // check for existence
+        if (requestAmount == 0) revert InvalidAmount(requestAmount);
+
+        request.state = State.CANCELLED;
+
+        emit EmergencyCancelMintRequest(_id);
     }
 
     function _addMintRequest(address _tokenAddress, uint256 _amount, uint256 _minExpectedAmount)

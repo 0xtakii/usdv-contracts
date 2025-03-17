@@ -96,6 +96,7 @@ contract WstUSF is IWstUSF, ERC20PermitUpgradeable, IDefaultErrors {
 
     function deposit(uint256 _usfAmount, address _receiver) public returns (uint256 wstUSFAmount) {
         wstUSFAmount = previewDeposit(_usfAmount);
+        _assertNonZero(wstUSFAmount);
         _deposit(msg.sender, _receiver, _usfAmount, wstUSFAmount);
 
         return wstUSFAmount;
@@ -181,6 +182,7 @@ contract WstUSF is IWstUSF, ERC20PermitUpgradeable, IDefaultErrors {
         _assertNonZero(_stUSFAmount);
 
         wstUSFAmount = convertToShares(_stUSFAmount);
+        _assertNonZero(wstUSFAmount);
         IERC20(stUSFAddress).safeTransferFrom(msg.sender, address(this), _stUSFAmount);
         _mint(_receiver, wstUSFAmount);
 

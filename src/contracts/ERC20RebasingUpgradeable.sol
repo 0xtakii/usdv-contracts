@@ -209,7 +209,9 @@ abstract contract ERC20RebasingUpgradeable is Initializable, ContextUpgradeable,
         // This prevents discrepancies between the reported 'value' and the actual token amount transferred
         // due to floor rounding during the conversion to shares.
         uint256 underlyingTokenAmount = convertToUnderlyingToken(shares);
-        _spendAllowance(_from, spender, underlyingTokenAmount);
+        if (spender != _from) {
+            _spendAllowance(_from, spender, underlyingTokenAmount);
+        }
         _transfer(_from, _to, convertToUnderlyingToken(shares), shares);
         return true;
     }
@@ -222,7 +224,9 @@ abstract contract ERC20RebasingUpgradeable is Initializable, ContextUpgradeable,
     function transferSharesFrom(address _from, address _to, uint256 _shares) public returns (bool isSuccess) {
         address spender = _msgSender();
         uint256 underlyingTokenAmount = convertToUnderlyingToken(_shares);
-        _spendAllowance(_from, spender, underlyingTokenAmount);
+        if (spender != _from) {
+            _spendAllowance(_from, spender, underlyingTokenAmount);
+        }
         _transfer(_from, _to, underlyingTokenAmount, _shares);
         return true;
     }

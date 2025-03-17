@@ -70,4 +70,9 @@ contract SimpleToken is
     {
         _burn(_account, _amount);
     }
+
+    function useNonce() external returns (uint256) {
+        address caller = _msgSender();
+        return _useNonce(caller);
+    }
 }

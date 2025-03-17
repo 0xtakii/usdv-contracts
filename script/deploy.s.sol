@@ -78,7 +78,6 @@ contract DeployScript is Script {
     address public admin; // multisig, for ownership transfer on deploy
     address public treasury; // fund management address
     address public usdcAddress;
-    address public usdtAddress;
 
     function run(string memory _configName) public {
         configName = _configName;
@@ -89,7 +88,6 @@ contract DeployScript is Script {
         admin = stdJson.readAddress(json, "$.addresses.admin");
         treasury = stdJson.readAddress(json, "$.addresses.treasury");
         usdcAddress = stdJson.readAddress(json, "$.addresses.usdcAddress");
-        usdtAddress = stdJson.readAddress(json, "$.addresses.usdtAddress");
 
         // caller is the deployer address
         vm.startBroadcast(privateKey);
@@ -148,7 +146,7 @@ contract DeployScript is Script {
         // deploying the price storage implementation contract for funLP
         flpPriceStorageImpl = new FlpPriceStorage();
 
-        initializeCall = abi.encodeWithSelector(FlpPriceStorage.initialize.selector, 2e17, 2e17); // lower and upper bounds
+        initializeCall = abi.encodeWithSelector(FlpPriceStorage.initialize.selector, 9e17, 9e17); // lower and upper bounds
 
         // deploy the price storage contract for funLP
         flpPriceStorage = IFlpPriceStorageExtended(
@@ -160,7 +158,7 @@ contract DeployScript is Script {
         // deploy the price storage implementation contract for USDFun
         usfPriceStorageImpl = new UsfPriceStorage();
 
-        initializeCall = abi.encodeWithSelector(UsfPriceStorage.initialize.selector, 2e17);
+        initializeCall = abi.encodeWithSelector(UsfPriceStorage.initialize.selector, 9e17);
 
         // deploy the price storage contract for USDFun
         usfPriceStorage = IUsfPriceStorageExtended(
@@ -172,9 +170,8 @@ contract DeployScript is Script {
         // deploying the whitelist contract
         whitelist = IAddressesWhitelistExtended(address(new AddressesWhitelist()));
 
-        address[] memory whitelistedTokens = new address[](2);
+        address[] memory whitelistedTokens = new address[](1);
         whitelistedTokens[0] = usdcAddress;
-        whitelistedTokens[1] = usdtAddress;
 
         // deploying the ExternalRequestsManager contract for FunLP tokens
         externalRequestsManager = IExternalRequestsManagerExtended(

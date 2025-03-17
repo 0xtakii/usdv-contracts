@@ -13,4 +13,6 @@ docs/
 # Dotenv file
 .env
 
+# Others
 .DS_Store
+broadcast/*

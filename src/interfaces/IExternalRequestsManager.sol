@@ -27,6 +27,7 @@ interface IExternalRequestsManager is IDefaultErrors {
     event AllowedTokenAdded(address tokenAddress);
     event AllowedTokenRemoved(address tokenAddres);
     event EmergencyWithdrawn(address tokenAddress, uint256 amount);
+    event EmergencyCancelMintRequest(uint256 id);
 
     error UnknownProvider(address account);
     error IllegalState(State expected, State current);
