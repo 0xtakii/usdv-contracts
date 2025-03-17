@@ -102,5 +102,5 @@ interface IExternalRequestsManager is IDefaultErrors {
 
     function completeBurn(bytes32 _idempotencyKey, uint256 _id, uint256 _withdrawalAmount) external;
 
-    function emergencyWithdraw(IERC20 _token) external;
+    function emergencyWithdraw(IERC20 _token, uint256 _amount) external;
 }

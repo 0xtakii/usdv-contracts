@@ -252,11 +252,10 @@ contract ExternalRequestsManager is IExternalRequestsManager, AccessControlDefau
     /* 
      * @dev Will never be called except in extreme emergency case.
      */
-    function emergencyWithdraw(IERC20 _token) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 balance = _token.balanceOf(address(this));
-        _token.safeTransfer(msg.sender, balance);
+    function emergencyWithdraw(IERC20 _token, uint256 _amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _token.safeTransfer(msg.sender, _amount);
 
-        emit EmergencyWithdrawn(address(_token), balance);
+        emit EmergencyWithdrawn(address(_token), _amount);
     }
 
     /* 
