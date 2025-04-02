@@ -1,0 +1,8 @@
+{
+    "addresses": {
+        "service": "0x47eE73CFE7C8Ecc46Fcd1B3202c0566D45F91a76",
+        "admin": "0xa0Eebe0a3a7F55f77fa008e57be30900917ed983",
+        "treasury": "0x4985CFA6994F55672cf4c142937203370c79a18B",
+        "usdcAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    }
+}

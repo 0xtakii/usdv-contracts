@@ -92,18 +92,22 @@ contract DeployScript is Script {
         // caller is the deployer address
         vm.startBroadcast(privateKey);
 
-        // deploy implementation contract for USDFun and FunLP tokens
+        // deploy implementation contract for USDV and FunLP tokens
         implementation = new SimpleToken();
 
-        // deploy the USDFun token
-        string memory name = "USDFun";
-        string memory symbol = "USDFun";
+        // deploy the USDV token
+        string memory name = "USDV";
+        string memory symbol = "USDV";
 
         bytes memory initializeCall = abi.encodeWithSelector(SimpleToken.initialize.selector, name, symbol);
 
         funToken = ISimpleTokenExtended(
             address(new TransparentUpgradeableProxy(address(implementation), admin, initializeCall))
         );
+
+        // deploy the VLP token
+        name = "VLP";
+        symbol = "VLP";
 
         initializeCall = abi.encodeWithSelector(SimpleToken.initialize.selector, name, symbol);
 
@@ -112,15 +116,15 @@ contract DeployScript is Script {
             address(new TransparentUpgradeableProxy(address(implementation), admin, initializeCall))
         );
 
-        // deploy the implementation contract for stUSDFun token
+        // deploy the implementation contract for stUSDV token
         stUsfImplementation = new StUSF();
 
-        name = "StUSDFun";
-        symbol = "StUSDFun";
+        name = "StUSDV";
+        symbol = "StUSDV";
 
         initializeCall = abi.encodeWithSelector(StUSF.initialize.selector, name, symbol, address(funToken));
 
-        // deploy the stUSDFun token
+        // deploy the stUSDV token
         stFunToken = IStUSFExtended(
             address(new TransparentUpgradeableProxy(address(stUsfImplementation), admin, initializeCall))
         );
@@ -130,16 +134,16 @@ contract DeployScript is Script {
             IRewardDistributorExtended(address(new RewardDistributor(address(stFunToken), address(funToken))));
 
         rewardDistributor.grantRole(SERVICE_ROLE, service); // service account requires ability trigger rewards distribution
-        funToken.grantRole(SERVICE_ROLE, address(rewardDistributor)); // reward distributor needs ability to mint USDFun tokens
+        funToken.grantRole(SERVICE_ROLE, address(rewardDistributor)); // reward distributor needs ability to mint USDV tokens
 
-        // deploy the implementation contract for wstUSDFun token
+        // deploy the implementation contract for wstUSDV token
         wstUsfImpl = new WstUSF();
 
-        name = "WstUSDFun";
-        symbol = "WstUSDFun";
+        name = "WstUSDV";
+        symbol = "WstUSDV";
         initializeCall = abi.encodeWithSelector(WstUSF.initialize.selector, name, symbol, address(stFunToken));
 
-        // deploy the wstUSDFun token
+        // deploy the wstUSDV token
         wstFunToken =
             IWstUSFExtended(address(new TransparentUpgradeableProxy(address(wstUsfImpl), admin, initializeCall)));
 
@@ -155,12 +159,12 @@ contract DeployScript is Script {
 
         flpPriceStorage.grantRole(SERVICE_ROLE, service);
 
-        // deploy the price storage implementation contract for USDFun
+        // deploy the price storage implementation contract for USDV
         usfPriceStorageImpl = new UsfPriceStorage();
 
         initializeCall = abi.encodeWithSelector(UsfPriceStorage.initialize.selector, 9e17);
 
-        // deploy the price storage contract for USDFun
+        // deploy the price storage contract for USDV
         usfPriceStorage = IUsfPriceStorageExtended(
             address(new TransparentUpgradeableProxy(address(usfPriceStorageImpl), admin, initializeCall))
         );
