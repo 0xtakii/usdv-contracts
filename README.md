@@ -1,12 +1,12 @@
-# USD FUN Contracts
+# USDV Contracts
 
-This repository contains the implementation for the USD FUN smart contracts
+This repository contains the implementation for the USDV smart contracts
 
 ## Contracts
 
 ### SimpleToken.sol
 
-Core implementation contract for the funLP and USDFun tokens
+Core implementation contract for the VLP and USDV tokens
 
 ### ERC20RebasingUpgradeable.sol
 
@@ -22,19 +22,19 @@ Implements ERC20RebasingPermitUpgradeable with additional logic
 
 ### WstUSF.sol
 
-Wrapped version of StUSF which allows users to keep their underlying balance fixed
+Wrapped version of StUSDV which allows users to keep their underlying balance fixed
 
 ### RewardsDistributor.sol
 
-Interface for backend service to trigger minting of USDFun tokens as yield for holders
+Interface for backend service to trigger minting of USDV tokens as yield for holders
 
 ### UsfPriceStorage.sol
 
-Price oracle for the USDFun token
+Price oracle for the USDV token
 
 ### FlpPriceStorage.sol
 
-Price oracle for the FunLP token
+Price oracle for the VLP token
 
 ### AddressesWhitelist.sol
 
@@ -42,7 +42,7 @@ Whitelist contract used for ExternalRequestsManager and UsfExternalRequestsManag
 
 ### ExternalRequestsManager.sol
 
-Interface for users to request to mint or burn FunLP tokens / USDFun tokens
+Interface for users to request to mint or burn VLP tokens / USDV tokens
 
 ## Foundry
 
